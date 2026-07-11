@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+:root {
+  /* Typography */
+
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains);
+
+  /* Core */
+
+  --background: #000000;
+  --surface: #070707;
+  --card: #101010;
+  --elevated: #181818;
+
+  /* Borders */
+
+  --border: #262626;
+  --border-soft: #1a1a1a;
+  --divider: #222222;
+
+  /* Typography */
+
+  --text: #ffffff;
+  --text-secondary: #d4d4d4;
+  --text-muted: #a3a3a3;
+  --text-disabled: #525252;
+
+  /* Brand */
+
+  --accent: #22d3ee;
+  --accent-hover: #67e8f9;
+  --accent-active: #06b6d4;
+  --accent-soft: #0a2d34;
+
+  /* Semantic */
+
+  --success: #22c55e;
+  --success-soft: #052e16;
+
+  --warning: #f59e0b;
+  --warning-soft: #3b2200;
+
+  --error: #ef4444;
+  --error-soft: #3b0a0a;
+
+  --info: #38bdf8;
+  --info-soft: #082f49;
+
+  /* Inputs */
+
+  --input: #070707;
+  --input-border: #262626;
+  --input-focus: #22d3ee;
+
+  /* Editor */
+
+  --editor: #050505;
+  --scrollbar: #2a2a2a;
+
+  /* Misc */
+
+  --selection: #10303a;
+  --focus-ring: #22d3ee;
+
+  --overlay: rgb(0 0 0 / 75%);
+  --shadow-color: rgb(0 0 0 / 45%);
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-elevated: var(--elevated);
+
+  --color-border: var(--border);
+  --color-border-soft: var(--border-soft);
+  --color-divider: var(--divider);
+
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+/* ======================================================
+   Base
+====================================================== */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--background);
+  color: var(--text);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: var(--selection);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+/* ======================================================
+   Scrollbar
+====================================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
+}
