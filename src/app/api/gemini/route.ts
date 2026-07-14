@@ -1,19 +1,30 @@
 import { NextResponse } from 'next/server'
-import { generateReadmePipeline } from '@/lib/geminiService'
+import { generateReadmeFromGithub, generateReadmeFromManual } from '@/lib/geminiService'
+import { readmeRequestSchema } from '@/validations/readme.validation'
 import { ApiResponse } from '@/types/ApiResponse'
 
 export async function POST(req: Request) {
   try {
-    const { systemPrompt, userPrompt } = await req.json()
+    const body = await req.json()
     
-    if (!userPrompt) {
+    // 1. Zod input validation check
+    const validationResult = readmeRequestSchema.safeParse(body)
+    if (!validationResult.success) {
       return NextResponse.json<ApiResponse>({
         success: false,
-        error: "Prompt content is required"
+        error: validationResult.error.issues[0].message
       }, { status: 400 })
     }
 
-    const result = await generateReadmePipeline(systemPrompt || "", userPrompt)
+    const validatedData = validationResult.data
+    let result;
+
+    // 2. Branch execution according to mode
+    if (validatedData.mode === 'github') {
+      result = await generateReadmeFromGithub(validatedData.githubUrl, validatedData.customInstructions)
+    } else {
+      result = await generateReadmeFromManual(validatedData.manualData, validatedData.customInstructions)
+    }
 
     return NextResponse.json<ApiResponse>({
       success: true,
