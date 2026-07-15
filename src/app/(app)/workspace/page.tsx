@@ -1,10 +1,10 @@
 "use client"
 
-import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import WorkspaceHub from '@/components/workspace/WorkspaceHub'
 import useApp from '@/context/AppContext'
 import ReadmeGenerator from '@/components/readme-generator/ReadmeGenerator'
+import CommitGenerator from '@/components/commit-msg-generator/CommitGenerator'
 
 const BackButton = ({ onClick }: { onClick: () => void }) => (
   <button
@@ -16,21 +16,8 @@ const BackButton = ({ onClick }: { onClick: () => void }) => (
 )
 
 
-const CommitGenerator = ({ onBack }: { onBack: () => void }) => (
-  <div>
-    <BackButton onClick={onBack} />
-    <h2 className="text-2xl font-medium text-text mb-2">Commit Message Generator</h2>
-    <p className="text-sm text-text-muted font-light">Convert messy patch summaries into semantic conventional commits.</p>
-  </div>
-)
 
-const CodeExplainer = ({ onBack }: { onBack: () => void }) => (
-  <div>
-    <BackButton onClick={onBack} />
-    <h2 className="text-2xl font-medium text-text mb-2">Code Explainer</h2>
-    <p className="text-sm text-text-muted font-light">Analyze architectures and complexity variables.</p>
-  </div>
-)
+
 
 const RegexGenerator = ({ onBack }: { onBack: () => void }) => (
   <div>
@@ -77,7 +64,6 @@ export default function page() {
           >
             {activeWindow === 'readme' && <ReadmeGenerator />}
             {activeWindow === 'commit' && <CommitGenerator onBack={handleBack} />}
-            {activeWindow === 'explainer' && <CodeExplainer onBack={handleBack} />}
             {activeWindow === 'regex' && <RegexGenerator onBack={handleBack} />}
             {activeWindow === 'json' && <JsonToolkit onBack={handleBack} />}
           </motion.div>

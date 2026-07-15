@@ -3,7 +3,7 @@
 import React from 'react'
 import { BookOpen, GitCommit, Code2, Binary, Database, ArrowRight } from 'lucide-react'
 
-type WindowType = 'hub' | 'readme' | 'commit' | 'explainer' | 'regex' | 'json'
+type WindowType = 'hub' | 'readme' | 'commit' | 'regex' | 'json'
 
 const options = [
   {
@@ -21,14 +21,6 @@ const options = [
     tag: "AI",
     tagType: "ai",
     icon: GitCommit,
-  },
-  {
-    id: "explainer" as WindowType,
-    title: "Code Explainer",
-    description: "Explain difficult architectures, analyze complexity variables, and identify core refactors.",
-    tag: "AI",
-    tagType: "ai",
-    icon: Code2,
   },
   {
     id: "regex" as WindowType,

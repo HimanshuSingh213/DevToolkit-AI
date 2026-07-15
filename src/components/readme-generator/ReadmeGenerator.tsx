@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, X, Folder, GitBranch, Loader2, Copy, Check } from 'lucide-react';
 import axios from 'axios';
@@ -30,6 +30,36 @@ export default function ReadmeGenerator() {
     const [activeTab, setActiveTab] = useState<"preview" | "raw">("preview");
     const [copied, setCopied] = useState(false);
     const [highlightedHtml, setHighlightedHtml] = useState("");
+    const abortControllerRef = useRef<AbortController | null>(null);
+    const [elapsedTime, setElapsedTime] = useState(0);
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+
+        if (loading) {
+            setElapsedTime(0);
+            interval = setInterval(() => {
+                setElapsedTime((prev) => prev + 1)
+            }, 1000);
+        }
+
+        return () => clearInterval(interval)
+    }, [loading])
+
+    const formatTime = (time: number): string => {
+        const mins = Math.floor(time / 60);
+        const sec = Math.floor(time % 60);
+
+        return `${mins.toString().padStart(2, '0')}:${sec.toString().padStart(2, "0")}`;
+    }
+
+    useEffect(() => {
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
+    }, []);
 
     useEffect(() => {
         if (!outputReadme) {
@@ -137,6 +167,13 @@ ${techStack.join(", ")}
             }
         }
 
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
         setLoading(true);
 
         try {
@@ -152,7 +189,9 @@ ${techStack.join(", ")}
                     customInstructions: contextEnhancer.trim() || undefined
                 };
 
-            const response = await axios.post("/api/gemini", requestBody);
+            const response = await axios.post("/api/gemini", requestBody, {
+                signal: controller.signal
+            });
 
             if (response.data.success) {
                 setOutputReadme(response.data.data.readme);
@@ -161,18 +200,26 @@ ${techStack.join(", ")}
                 toast.error(response.data.error || "Failed to generate README");
             }
         } catch (error: any) {
+            if (axios.isCancel(error)) {
+                console.log("Generation request aborted.");
+                return;
+            }
             const errorMsg = error.response?.data?.error || error.message || "Failed to generate README";
             toast.error(errorMsg);
         } finally {
+            if (abortControllerRef.current === controller) {
+                abortControllerRef.current = null;
+            }
             setLoading(false);
         }
     };
 
     return (
         <div className="w-full h-[calc(100vh-80px)] shrink-0 grid grid-cols-2 gap-4 overflow-hidden">
+            {/* input side */}
             <div className='relative flex flex-col h-full w-full overflow-hidden pb-24'>
                 <div className='flex-1 overflow-y-auto flex flex-col gap-4 pr-2 pb-6'>
-                    <h2 className='text-text text-sm font-mono pb-2 border-b border-b-border-soft'>Configuration_Schema</h2>
+                    <h2 className='text-text text-sm font-mono pb-2 border-b border-b-divider'>Configuration_Schema</h2>
 
                     <div className='flex flex-col gap-2.5 bg-card border border-border-soft rounded-xl p-4 w-full select-none shadow-sm'>
                         <p className='text-xs text-text-muted font-mono uppercase tracking-wider px-1'>Source Engine</p>
@@ -307,8 +354,8 @@ ${techStack.join(", ")}
                                                                     setIsDropdownOpen(false);
                                                                 }}
                                                                 className={`w-full text-left px-3 py-2 text-xs transition duration-150 cursor-pointer ${tone === option
-                                                                        ? 'text-accent bg-accent-soft/20 font-semibold'
-                                                                        : 'text-text-muted hover:text-text hover:bg-surface/50'
+                                                                    ? 'text-accent bg-accent-soft/20 font-semibold'
+                                                                    : 'text-text-muted hover:text-text hover:bg-surface/50'
                                                                     }`}
                                                             >
                                                                 {option}
@@ -364,15 +411,50 @@ ${techStack.join(", ")}
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black via-black/95 to-transparent pt-10 pb-4 z-20 w-full flex flex-col gap-2">
-                    <button
-                        type="button"
-                        onClick={handleGenerate}
-                        disabled={loading}
-                        className="w-full bg-text text-background font-semibold py-2.5 rounded-lg hover:bg-text-secondary transition duration-200 cursor-pointer shadow-md select-none text-sm tracking-wide flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {loading && <Loader2 size={16} className="animate-spin" />}
-                        Generate README
-                    </button>
+                    <div className="relative w-full">
+                        <AnimatePresence>
+                            {loading && (
+                                <motion.div
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: -30, opacity: 1 }}
+                                    exit={{ y: 20, opacity: 0 }}
+                                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                                    className='absolute top-0 left-2 z-10 h-8 flex items-center justify-center pl-3 pr-6 select-none'
+                                    style={{
+                                        clipPath: 'polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%)'
+                                    }}
+                                >
+                                    {/* Border Backdrop */}
+                                    <div className="absolute inset-0 bg-border-soft -z-20" />
+                                    {/* Surface Background */}
+                                    <div 
+                                        className="absolute top-[1.5px] left-[1.5px] right-[1.5px] bottom-0 bg-surface rounded-tl-md -z-10"
+                                        style={{
+                                            clipPath: 'polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%)'
+                                        }}
+                                    />
+                                    {/* Timer Text */}
+                                    <span className="relative z-20 flex items-center gap-1.5 font-mono text-[10px] text-accent font-semibold tracking-wide">
+                                        <span className="relative flex h-1.5 w-1.5">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-accent"></span>
+                                        </span>
+                                        ELAPSED_TIME: {formatTime(elapsedTime)} min
+                                    </span>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        <button
+                            type="button"
+                            onClick={handleGenerate}
+                            disabled={loading}
+                            className="relative z-20 w-full bg-text text-background font-semibold py-2.5 rounded-lg hover:bg-text-secondary transition duration-200 cursor-pointer shadow-md select-none text-sm tracking-wide flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading && <Loader2 size={16} className="animate-spin" />}
+                            Generate README
+                        </button>
+                    </div>
 
                     <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-text-muted select-none">
                         <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
@@ -381,6 +463,7 @@ ${techStack.join(", ")}
                 </div>
             </div>
 
+            {/* output side */}
             <div className="relative flex flex-col h-full w-full bg-card border border-border-soft rounded-xl overflow-hidden shadow-2xl">
                 <div className="flex items-center justify-between px-4 py-3 bg-surface/80 border-b border-b-border-soft select-none">
                     <div className="flex items-center gap-1.5 w-1/4">
@@ -394,13 +477,19 @@ ${techStack.join(", ")}
                         <span className="truncate">devtoolkit.ai/workspace/readme-preview.md</span>
                     </div>
 
-                    <div className="flex items-center justify-end gap-2 w-1/4">
+                    <div className="flex items-center justify-end gap-2 w-[45%] shrink-0">
+                        {outputReadme && !loading && (
+                            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded-md text-[9px] font-mono text-emerald-500 font-semibold select-none shadow-xs">
+                                <Check size={10} strokeWidth={3} />
+                                {formatTime(elapsedTime)}
+                            </span>
+                        )}
                         <div className="flex p-0.5 bg-elevated border border-border-soft rounded-lg">
                             <button
                                 onClick={() => setActiveTab("preview")}
                                 className={`px-2.5 py-1 text-[9px] font-semibold tracking-wide rounded-md transition cursor-pointer ${activeTab === "preview"
-                                        ? "bg-surface text-text border border-border-soft shadow-sm"
-                                        : "text-text-muted hover:text-text"
+                                    ? "bg-surface text-text border border-border-soft shadow-sm"
+                                    : "text-text-muted hover:text-text"
                                     }`}
                             >
                                 Preview
@@ -408,8 +497,8 @@ ${techStack.join(", ")}
                             <button
                                 onClick={() => setActiveTab("raw")}
                                 className={`px-2.5 py-1 text-[9px] font-semibold tracking-wide rounded-md transition cursor-pointer ${activeTab === "raw"
-                                        ? "bg-surface text-text border border-border-soft shadow-sm"
-                                        : "text-text-muted hover:text-text"
+                                    ? "bg-surface text-text border border-border-soft shadow-sm"
+                                    : "text-text-muted hover:text-text"
                                     }`}
                             >
                                 Raw MD

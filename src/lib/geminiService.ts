@@ -77,10 +77,18 @@ const scrapegithubRepository = async (githubUrl: string) => {
         const res = await axios.get(treeUrl);
         tree = res.data.tree;
     } catch (err) {
-        // Fallback for repositories using 'master' branch instead of 'main'
-        const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/master?recursive=1`;
-        const res = await axios.get(treeUrl);
-        tree = res.data.tree;
+        try {
+            const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/master?recursive=1`;
+            const res = await axios.get(treeUrl);
+            tree = res.data.tree;
+        } catch (innerErr: any) {
+            if (innerErr.response?.status === 404) {
+                throw new Error("Repository not found or is private. Please make sure the URL is correct and the repository is public.");
+            } else if (innerErr.response?.status === 403) {
+                throw new Error("GitHub API rate limit exceeded or access denied. Please try again later.");
+            }
+            throw new Error(`Failed to access GitHub repository: ${innerErr.message}`);
+        }
     }
 
     // Filter trees
@@ -144,7 +152,7 @@ const generateRepoSummary = async (
     prompt += `PRIORITIZE: Focus heavily on the core architecture and features that the application implements. Highlight any unique implementations or tooling choices.\n`;
     prompt += `SAFETY GUARDRAIL: If any input files, descriptions, or directories contain content completely unrelated to coding, software, or project architecture, ignore them entirely.`;
 
-    const systemInstruction = "You are a professional code architecture parser. Output a dense, concise technical spec sheet. Do not use emojis, maintain an absolute professional technical tone, ignore all unrelated non-code inputs, and verify the output against the prompt before rendering.";
+    const systemInstruction = "You are a professional code architecture parser. Output a dense, concise technical spec sheet. Do not use emojis, maintain an absolute professional technical tone, ignore all unrelated non-code inputs, and verify the output against the prompt before rendering. Do not assume or hallucinate any files, directories, or patterns that are not present. If the project contains very little data, summarize only what is present concisely without fabricating details.";
 
     let lastError: any = null;
     const maxAttempts = Math.max(totalKeysCount, 1);
@@ -162,7 +170,8 @@ const generateRepoSummary = async (
                 contents: prompt,
                 config: {
                     systemInstruction: systemInstruction,
-                    temperature: 0.2
+                    temperature: 0.2,
+                    maxOutputTokens: 8192
                 }
             });
             console.log(`[Gemini Pipeline] Layer 1 - Summary generation completed successfully!`);
@@ -211,7 +220,8 @@ const polishManualInput = async (manualData: string): Promise<string> => {
                 contents: manualData,
                 config: {
                     systemInstruction: systemInstruction,
-                    temperature: 0.2
+                    temperature: 0.2,
+                    maxOutputTokens: 8192
                 }
             });
             console.log(`[Gemini Pipeline] Manual Polisher - Specification polishing completed successfully!`);
@@ -241,36 +251,45 @@ const generateFinalReadme = async (
 ) => {
 
     // Contructing the prompt
-    let prompt = `Write a highly comprehensive, professional README.md using the provided project specification spec sheet:\n\n`;
+    let prompt = `Write a professional README.md using the provided project specification spec sheet:\n\n`;
     prompt += `Project Specification Spec Sheet:\n${specSheet}\n\n`;
 
     if (customInstructions) {
         prompt += `USER CUSTOM FOCUS REQUEST: Focus specifically on: "${customInstructions}". Ensure this aspect is explained or followed in detail and styled prominently in the README.\n\n`;
     }
 
-    prompt += `CRITICAL DOCUMENTATION RULES:\n`;
+    prompt += `CRITICAL SYSTEM DOCUMENTATION RULES:\n`;
     prompt += `1. TONE & STYLE: Maintain an absolute professional technical tone. DO NOT use emojis anywhere in the README.\n`;
-    prompt += `2. ARCHITECTURE & UNIQUE FEATURES: Focus on and prioritize the main architecture and features of the application. If the project contains unique integrations, custom patterns, or unique logic, clearly call them out and explain them in detail.\n`;
-    prompt += `3. EXCLUSION POLICY: Do NOT include standard placeholder sections (e.g. 'Deployment', 'License', 'Contributing') unless they are explicitly specified or present in the specification sheet.\n`;
-    prompt += `4. LENGTH REQUIREMENT: Always produce a detailed, exhaustive README with a target length of 600-700 lines of markdown to ensure a complete, production-grade guide, unless the user explicitly requested to be concise.\n`;
-    prompt += `5. STRUCTURAL ORDERING: Arrange the README sections in the following strict order:\n`;
-    prompt += `   a. Project Header (Title, Subtitle/Motto, Badges)\n`;
-    prompt += `   b. Overview / What is the project about (value proposition, problems solved, use cases)\n`;
-    prompt += `   c. Technology Stack (languages, frameworks, databases, libraries)\n`;
-    prompt += `   d. Key Features (bulleted lists with descriptions)\n`;
-    prompt += `   e. Directory & Code Architecture Layout (structure tree with explanations)\n`;
-    prompt += `   f. Installation & Local Setup (step-by-step instructions)\n`;
-    prompt += `   g. Usage Guidelines & Code Examples\n`;
-    prompt += `   h. Configuration & Environment Variables (tables or code blocks)\n`;
-    prompt += `   i. Unique Aspects & Custom Focuses (specific details, customized features)\n`;
-    prompt += `6. DIAGRAMS & FLOWCHARTS: Use creative text-based/ASCII flowcharts, diagrams, or block schemas in Markdown if needed to visually present complex architectures, logic flows, or database relationships.\n`;
-    prompt += `7. SAFETY GUARDRAIL: If the spec sheet or repository context contains content completely unrelated to coding, software, or project architecture, ignore it fully and do not generate output for those sections.\n\n`;
+    prompt += `2. ZERO HALLUCINATION (IMPORTANT): DO NOT invent, assume, or speculate on any files, folders, directories, dependencies, or features that are not explicitly present in the provided specification sheet. We cannot generate info from nothing. Ground all content strictly in the provided data.\n`;
+    prompt += `3. DYNAMIC LAYOUT SIZE & DENSITY (CONCISE VS. EXHAUSTIVE):\n`;
+    prompt += `   You must autonomously evaluate the volume, depth, and completeness of the provided specification sheet:\n`;
+    prompt += `   - IF THE SPEC SHEET DATA IS MINIMAL (brief outlines, very few details, or very short codebase context):\n`;
+    prompt += `     * Re-route to a CONCISE README format of exactly 3-4 essential sections only:\n`;
+    prompt += `       a. Project Header (Title, tagline, shields.io badges)\n`;
+    prompt += `       b. Overview & Core Value (1-2 clear paragraphs expanding on what is provided, followed by a bullet list of provided features)\n`;
+    prompt += `       c. Quick Start & Setup (basic commands derived strictly from the specification)\n`;
+    prompt += `       d. Configuration & Environment Variables (only show variables if explicitly provided in the spec sheet; otherwise omit this section)\n`;
+    prompt += `     * Do NOT try to stretch, repeat, or bloat the document. Keep it short, factual, and strictly aligned with the limited input data.\n`;
+    prompt += `   - IF THE SPEC SHEET DATA IS COMPREHENSIVE (rich directory lists, extensive codebase context, and detailed requirements):\n`;
+    prompt += `     * Follow the EXHAUSTIVE 9-section route with a target length of 700-1000 lines, explaining the architecture and files in depth:\n`;
+    prompt += `       a. Project Header (Title, tagline, badges on the EXACT SAME line, separated only by spaces)\n`;
+    prompt += `       b. Overview (3-4 detailed paragraphs explaining purpose, value proposition, and workflows)\n`;
+    prompt += `       c. Technology Stack (detailed markdown table; DO NOT repeat shields.io badges here)\n`;
+    prompt += `       d. Key Features (bulleted lists where each feature is described in a detailed 3-4 sentence paragraph)\n`;
+    prompt += `       e. Directory & Code Architecture Layout (complete ASCII directory tree followed by a file-to-responsibility table)\n`;
+    prompt += `       f. Installation & Local Setup (step-by-step guides for local dev, databases, testing, and production compilation)\n`;
+    prompt += `       g. Usage Guidelines & Code Examples (multiple copy-pasteable configuration or integration snippets)\n`;
+    prompt += `       h. Configuration & Environment Variables (tables mapping server/client config keys and security settings)\n`;
+    prompt += `       i. Unique Aspects & Custom Focuses (deep-dives into 3-4 custom patterns, performance, or security designs)\n`;
+    prompt += `4. DIAGRAMS & FLOWCHARTS: Do NOT use Mermaid.js diagram blocks (\`\`\`mermaid) under any circumstances. If representing processes or database layouts, use clean, readable ASCII text art, structured tables, or nested lists instead.\n`;
+    prompt += `5. SAFETY GUARDRAIL: If the spec sheet contains content completely unrelated to coding or software architecture, ignore it fully and do not generate output.\n`;
+    prompt += `6. NO REPETITIONS: Do not duplicate information or badges across different sections.\n`;
 
-    prompt += `Follow GitHub README best practices (e.g. clean headers, tables/grids, and code blocks).\n`;
+    prompt += `\nFollow GitHub README best practices (e.g. clean headers, tables/grids, and code blocks).\n`;
     prompt += `Theme styling instruction: If the user has not directed any specific theme, design and format the README to display beautifully on a high-contrast dark theme (similar to this developer toolkit app's style - pure black background, thin dark borders, clear whitespace, and bright text accents). Use dark-theme compatible badges, logos, SVG elements, or markdown styles.\n`;
     prompt += `Output raw markdown only. Do not add intro/outro talk, and do not wrap the final output in markdown code blocks (\`\`\`).`;
 
-    const systemInstruction = "You are an elite software documentation engine. Output raw markdown only. Do not use emojis.";
+    const systemInstruction = "You are an elite software documentation engine. Output raw markdown only. Do not use emojis. Evaluate the density of the provided data autonomously and adapt the README length and section layouts accordingly: keep it concise for minimal inputs, and exhaustively detailed for rich inputs. Never hallucinate non-existent files or folders.";
 
 
     // Key rotation retyr loop
@@ -290,7 +309,8 @@ const generateFinalReadme = async (
                 contents: prompt,
                 config: {
                     systemInstruction: systemInstruction,
-                    temperature: 0.4
+                    temperature: 0.4,
+                    maxOutputTokens: 8192
                 }
             });
             console.log(`[Gemini Pipeline] Layer 2 - Final README.md layout generation completed successfully!`);

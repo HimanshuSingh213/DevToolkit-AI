@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
     
-    // 1. Zod input validation check
+    // Zod input validation check
     const validationResult = readmeRequestSchema.safeParse(body)
     if (!validationResult.success) {
       return NextResponse.json<ApiResponse>({
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     const validatedData = validationResult.data
     let result;
 
-    // 2. Branch execution according to mode
+    // Branch execution according to mode
     if (validatedData.mode === 'github') {
       result = await generateReadmeFromGithub(validatedData.githubUrl, validatedData.customInstructions)
     } else {

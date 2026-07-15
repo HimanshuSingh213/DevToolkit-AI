@@ -13,12 +13,21 @@ const loadingAnimations = [
 ];
 
 const loadingStepsText = [
-    "Initializing engine and authenticating API keys...",
-    "Scanning repository structure and directory layout...",
-    "Layer 1: Parsing packages and project modules...",
-    "Layer 1: Building project specification schema...",
-    "Layer 2: Synthesizing markdown documentation layout...",
-    "Polishing final theme styling and badges..."
+    "CONTEMPLATING ARCHITECTURAL COMPLEXITIES AND MODULE PATHS...",
+    "REFRACTING NEURAL PATTERNS FOR OPTIMAL SCHEMA COHERENCE...",
+    "INTERPRETING SYSTEM DESIGNS AND CORE METHODOLOGIES...",
+    "SYNTHESIZING DENSE INTELLECTUAL SPECIFICATION ARTIFACTS...",
+    "ALIGNING STYLES AGAINST COMPILATION HIGHLIGHT PARITY...",
+    "CRYSTALLIZING RICH DOCUMENTATION PARADIGM SEGMENTS..."
+];
+
+const fancySubText = [
+    "CONTEMPLATING...",
+    "REFINING...",
+    "PROCESSING...",
+    "SYNTHESIZING...",
+    "OPTIMIZING...",
+    "CRYSTALLIZING..."
 ];
 
 interface ReadmeLoaderProps {
@@ -53,20 +62,26 @@ export default function ReadmeLoader({ loading }: ReadmeLoaderProps) {
 
     return (
         <div className="w-full h-full flex flex-col items-center justify-center bg-surface p-6 select-none">
-            <div className="w-64 h-64 select-none pointer-events-none">
-                <DotLottieReact
-                    key={animationIndex}
-                    src={loadingAnimations[animationIndex]}
-                    loop
-                    autoplay
-                />
+            <div className="w-80 h-80 select-none pointer-events-none">
+                {loadingAnimations.map((src, index) => (
+                    <div 
+                        key={index} 
+                        className={index === animationIndex ? "block" : "hidden"}
+                    >
+                        <DotLottieReact
+                            src={src}
+                            loop
+                            autoplay
+                        />
+                    </div>
+                ))}
             </div>
-            <div className="flex flex-col items-center gap-1.5 mt-2">
-                <p className="text-xs font-mono text-text animate-pulse text-center">
-                    {loadingStepsText[animationIndex]}
+            <div className="flex flex-col items-center gap-1.5 -mt-8">
+                <p className="text-[10px] font-mono text-accent tracking-widest uppercase animate-pulse">
+                    {fancySubText[animationIndex]}
                 </p>
-                <p className="text-[10px] text-text-muted font-light max-w-[240px] text-center">
-                    Step {loadingStepsText.length + 1} of {loadingStepsText.length}
+                <p className="text-xs font-mono text-text-secondary text-center max-w-[280px]">
+                    {loadingStepsText[animationIndex]}
                 </p>
             </div>
         </div>
