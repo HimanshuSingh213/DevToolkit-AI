@@ -110,14 +110,14 @@ Rules:
                 setActualModel(response.data.data.modelUsed);
                 toast.success("Commit message generated successfully!");
             } else {
-                toast.error(response.data.error || "Failed to generate commit message");
+                toast.error("Failed to generate commit message. Please try again.");
             }
         } catch (error: any) {
             if (axios.isCancel(error)) {
                 console.log("Request aborted.");
                 return;
             }
-            toast.error(error.response?.data?.error || error.message || "Failed to generate commit message");
+            toast.error("Failed to generate commit message. Please try again.");
         } finally {
             if (abortControllerRef.current === controller) {
                 abortControllerRef.current = null;
@@ -130,9 +130,9 @@ Rules:
         <div className="w-full h-full min-h-0 shrink-0 grid grid-cols-2 gap-4 overflow-hidden">
             <div className='relative flex flex-col h-full w-full overflow-hidden pb-24'>
                 <div className='grow overflow-y-auto flex flex-col gap-4 pr-2 pb-6'>
-                    <div className='pb-2 border-b border-b-border-soft select-none'>
-                        <h2 className='text-text text-sm font-mono'>DIFF_INPUT_BUFFER</h2>
-                    </div>
+
+                    <h2 className='text-text text-sm font-mono pb-2 border-b border-b-divider select-none'>DIFF_INPUT_BUFFER</h2>
+
 
                     <div className='flex flex-col gap-2.5 bg-card border border-border-soft rounded-xl p-4 w-full select-none shadow-sm'>
                         <div className="flex items-center justify-between px-1">
@@ -162,8 +162,8 @@ Rules:
                                     <span className="shrink-0 px-1.5 py-0.5 rounded-sm bg-accent-soft/30 border border-accent/20 text-accent text-[8px] font-mono font-semibold mr-1.5 uppercase select-none">Win</span>
                                     <span className="truncate text-text-secondary select-all">git diff | Set-Clipboard</span>
                                 </div>
-                                <CopyButton 
-                                    text="git diff | Set-Clipboard" 
+                                <CopyButton
+                                    text="git diff | Set-Clipboard"
                                     successMessage="Windows command copied!"
                                     iconOnly
                                     className="px-1 py-1 bg-transparent border-none hover:bg-transparent text-text-muted hover:text-text cursor-pointer"
@@ -174,8 +174,8 @@ Rules:
                                     <span className="shrink-0 px-1.5 py-0.5 rounded-sm bg-elevated border border-border text-text-muted text-[8px] font-mono font-semibold mr-1.5 uppercase select-none">Mac</span>
                                     <span className="truncate text-text-secondary select-all">git diff | pbcopy</span>
                                 </div>
-                                <CopyButton 
-                                    text="git diff | pbcopy" 
+                                <CopyButton
+                                    text="git diff | pbcopy"
                                     successMessage="Mac/Linux command copied!"
                                     iconOnly
                                     className="px-1 py-1 bg-transparent border-none hover:bg-transparent text-text-muted hover:text-text cursor-pointer"
@@ -195,11 +195,10 @@ Rules:
                                     key={style}
                                     type="button"
                                     onClick={() => setTone(style)}
-                                    className={`relative z-10 text-[10px] font-mono py-2 text-center transition-all duration-200 ease-in-out cursor-pointer rounded-md border outline-none ${
-                                        tone === style 
-                                            ? "text-accent bg-accent-soft/20 border-accent/30 font-semibold" 
+                                    className={`relative z-10 text-[10px] font-mono py-2 text-center transition-all duration-200 ease-in-out cursor-pointer rounded-md border outline-none ${tone === style
+                                            ? "text-accent bg-accent-soft/20 border-accent/30 font-semibold"
                                             : "text-text-muted border-transparent hover:text-text hover:bg-surface/50"
-                                    }`}
+                                        }`}
                                 >
                                     {style.toUpperCase()}
                                 </button>
@@ -224,7 +223,7 @@ Rules:
                                         }}
                                     >
                                         <div className="absolute inset-0 bg-border-soft -z-20" />
-                                        <div 
+                                        <div
                                             className="absolute top-[1.5px] left-[1.5px] right-[1.5px] bottom-0 bg-surface rounded-tl-md -z-10"
                                             style={{
                                                 clipPath: 'polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%)'
@@ -265,11 +264,11 @@ Rules:
                                 <span>
                                     Active Engine: Groq {
                                         actualModel === "llama-3.1-8b-instant" ? "Llama 3.1 8B" :
-                                        actualModel === "meta-llama/llama-4-scout-17b-16e-instruct" ? "Llama 4 Scout" :
-                                        actualModel === "groq/compound-mini" ? "Compound Mini" :
-                                        actualModel === "groq/compound" ? "Compound 70B" :
-                                        actualModel === "llama-3.3-70b-versatile" ? "Llama 3.3 70B" :
-                                        actualModel
+                                            actualModel === "meta-llama/llama-4-scout-17b-16e-instruct" ? "Llama 4 Scout" :
+                                                actualModel === "groq/compound-mini" ? "Compound Mini" :
+                                                    actualModel === "groq/compound" ? "Compound 70B" :
+                                                        actualModel === "llama-3.3-70b-versatile" ? "Llama 3.3 70B" :
+                                                            actualModel
                                     }
                                 </span>
                             </>
@@ -328,15 +327,15 @@ Rules:
 
                 {generatedMessage && (
                     <div className="p-4 border-t border-t-border-soft bg-surface/80 flex gap-3 select-none">
-                        <CopyButton 
-                            text={generatedMessage} 
-                            label="Copy Message" 
+                        <CopyButton
+                            text={generatedMessage}
+                            label="Copy Message"
                             successMessage="Commit message copied!"
                             className="grow bg-text text-background font-semibold py-2 rounded-lg hover:bg-text-secondary transition duration-200 cursor-pointer shadow-md text-xs tracking-wide flex items-center justify-center gap-1.5 border-none outline-none"
                         />
-                        <CopyButton 
-                            text={`git commit -m "${generatedMessage.replace(/"/g, '\\"')}"`} 
-                            label="Copy Git Command" 
+                        <CopyButton
+                            text={`git commit -m "${generatedMessage.replace(/"/g, '\\"')}"`}
+                            label="Copy Git Command"
                             successMessage="Git command copied!"
                             className="grow bg-elevated text-text border border-border-soft font-semibold py-2 rounded-lg hover:bg-surface transition duration-200 cursor-pointer shadow-md text-xs tracking-wide flex items-center justify-center gap-1.5 outline-none"
                         />

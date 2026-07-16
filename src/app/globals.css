@@ -88,9 +88,13 @@
   --color-accent-soft: var(--accent-soft);
 
   --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
   --color-error: var(--error);
+  --color-error-soft: var(--error-soft);
   --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
 
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);

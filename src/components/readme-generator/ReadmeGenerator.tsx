@@ -197,15 +197,14 @@ ${techStack.join(", ")}
                 setOutputReadme(response.data.data.readme);
                 toast.success("README generated successfully!");
             } else {
-                toast.error(response.data.error || "Failed to generate README");
+                toast.error("Failed to generate README. Please try again.");
             }
         } catch (error: any) {
             if (axios.isCancel(error)) {
                 console.log("Generation request aborted.");
                 return;
             }
-            const errorMsg = error.response?.data?.error || error.message || "Failed to generate README";
-            toast.error(errorMsg);
+            toast.error("Failed to generate README. Please try again.");
         } finally {
             if (abortControllerRef.current === controller) {
                 abortControllerRef.current = null;
