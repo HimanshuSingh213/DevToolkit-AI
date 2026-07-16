@@ -1,6 +1,6 @@
 import { GenerateGrokOutput } from "@/lib/groqService";
 import { ApiResponse } from "@/types/ApiResponse";
-import { groqRequestSchema } from "@/validations/others.validation";
+import { groqRequestSchema } from "@/validations/groq.validation";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {

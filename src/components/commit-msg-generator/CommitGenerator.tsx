@@ -1,23 +1,36 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from 'react';
-import { GitCommit, Copy, Check, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { GitCommit, Check, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CopyButton from '@/components/CopyButton';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
-interface CommitGeneratorProps {
-    onBack: () => void;
-}
+const preprocessDiff = (diff: string): string => {
+    if (!diff) return "";
+    return diff
+        .split(/^diff --git /m)
+        .filter(file => !file.includes("package-lock.json") && !file.includes("pnpm-lock.yaml") && !file.includes("yarn.lock"))
+        .join("\ndiff --git ");
+};
 
-export default function CommitGenerator({ onBack }: CommitGeneratorProps) {
+export default function CommitGenerator() {
     const [diffInput, setDiffInput] = useState("");
     const [tone, setTone] = useState<"conventional" | "emoji" | "minimalist">("conventional");
     const [loading, setLoading] = useState(false);
     const [generatedMessage, setGeneratedMessage] = useState("");
     const [elapsedTime, setElapsedTime] = useState(0);
+    const [actualModel, setActualModel] = useState<string>("llama-3.1-8b-instant");
     const abortControllerRef = useRef<AbortController | null>(null);
+
+    const cleanedDiff = useMemo(() => preprocessDiff(diffInput), [diffInput]);
+
+    useEffect(() => {
+        const defaultModel = cleanedDiff.trim().length < 20000 ? "llama-3.1-8b-instant" : "groq/compound-mini";
+        setActualModel(defaultModel);
+    }, [cleanedDiff]);
 
     useEffect(() => {
         let intervalId: NodeJS.Timeout;
@@ -64,38 +77,37 @@ export default function CommitGenerator({ onBack }: CommitGeneratorProps) {
 
         const systemConfig = `You are an expert git semantic commit message engine. Your task is to output a single, professionally formatted commit message based on the user's input.
 
-CRITICAL INSTRUCTIONS:
-- First, inspect the user's input. If it is a raw 'git diff', analyze the changed lines, file paths, and function names to extract precise technical context.
-- DO NOT generate generic, lazy commit messages like 'feat: update config' or 'fix: fix error'. Be descriptive and specific about WHAT changed and WHERE (e.g., 'feat(config): integrate next-auth session variables in next.config.ts').
-- IMPACT RANKING (PRIORITIZE LARGE CHANGES): Analyze the scale of modifications. Newly created files, pages, or components with substantial lines of code are HIGH impact and MUST be featured in the commit message header or primary bullets. Small changes in config files (like package.json, next.config, eslint, or lockfiles) are LOW impact and should only be mentioned as secondary bullets or omitted entirely. Never let minor config edits dominate if new features/files were introduced.
-- PRIMARY FEATURE HIERARCHY: Identify the single most important user-facing feature, page, or component being introduced. This primary change MUST be the subject line header. Group config/dependencies modifications as secondary bullet points.
-- INTELLIGENT CONTEXT ANALYSIS: When analyzing file additions or modifications, do not just list that a file or folder was added/edited. Read the code changes to determine its purpose. State clearly what feature, design, module, or component the file implements (e.g. 'feat(ui): implement CopyButton component for reusable clipboard actions' instead of 'add CopyButton.tsx'). Explain the purpose and the 'why' of the modifications.
-- Format the commit message using the requested style:
-  - If tone is 'conventional': Follow Conventional Commits specification. Structure: <type>(<scope>): <short description> followed by detailed bullet points explaining the changes. Do NOT use emojis.
+CRITICAL RULES:
+- SINGLE SENTENCE FORMAT: The output must contain EXACTLY one single line of text (one sentence). Do NOT output multiple lines, bullet points, bodies, or footers.
+- MULTIPLE CHANGES: If there are multiple distinct logical changes, combine them into that single sentence using commas to separate them. Structure: <type>(<scope>): <change 1>, <change 2>, <change 3> (e.g. 'feat(workspace): implement commit message generator, refactor groq fallback logic, fix toast error handling').
+- HIERARCHY OF IMPORTANCE (PRIORITIZE LARGE CHANGES): Always describe the largest, most significant code changes first (e.g. new pages, major hooks, logic rewrites). Medium changes go second. 
+- CONFIG FILE PRIORITY: Do NOT mention configuration file changes (like package.json, next.config, eslint, lockfiles, etc.) unless they are the ONLY changes present in the entire git diff. If there are other source code changes, ignore config changes completely.
+- IMPERATIVE MOOD: Use present-tense, imperative mood for all actions (e.g., 'implement', 'refactor', 'fix', 'add' instead of 'implemented', 'refactored', 'fixed', 'added').
+- TONE STYLES:
+  - If tone is 'conventional': Output a strictly single-line conventional commit message starting with <type>(<scope>): followed by your comma-separated sentence. Do NOT use emojis.
   - If tone is 'emoji': Same as conventional, but prepend a relevant Gitmoji icon to the header.
-  - If tone is 'minimalist': Output a strictly single-line, direct, descriptive message (no scope, no bullets).
-
-CRITICAL LENGTH RULES:
-- Target length: Keep the message precisely 2 to 3 lines long total (including header, blank line, and body bullet points).
-- Keep descriptions brief but technically accurate, specifying the exact changes made.
+  - If tone is 'minimalist': Output a strictly single-line, direct description (no conventional prefix, no scope, no emojis, e.g. 'implement commit generator, refactor fallback logic').
 
 Rules:
-- Output EXACTLY one commit message.
+- Output ONLY the raw one-sentence commit message.
 - DO NOT wrap the output in markdown code blocks (\`\`\`), and do not write introduction or outro remarks.`;
 
-        const userPrompt = `Selected Tone Style: ${tone}\n\nUser Input (Git Diff or Summary):\n${diffInput.trim()}`;
+        const userPrompt = `Selected Tone Style: ${tone}\n\nUser Input (Git Diff or Summary):\n${cleanedDiff.trim()}`;
+        const targetModel = cleanedDiff.trim().length < 20000 ? "llama-3.1-8b-instant" : "groq/compound-mini";
+        setActualModel(targetModel);
 
         try {
             const response = await axios.post("/api/grok", {
                 systemConfig,
                 userPrompt,
-                model: userPrompt.length < 12000 ? "llama-3.1-8b-instant" : "llama-3.3-70b-versatile"
+                model: targetModel
             }, {
                 signal: controller.signal
             });
 
             if (response.data.success) {
-                setGeneratedMessage(response.data.data);
+                setGeneratedMessage(response.data.data.text);
+                setActualModel(response.data.data.modelUsed);
                 toast.success("Commit message generated successfully!");
             } else {
                 toast.error(response.data.error || "Failed to generate commit message");
@@ -115,7 +127,7 @@ Rules:
     };
 
     return (
-        <div className="w-full h-[calc(100vh-80px)] shrink-0 grid grid-cols-2 gap-4 overflow-hidden">
+        <div className="w-full h-full min-h-0 shrink-0 grid grid-cols-2 gap-4 overflow-hidden">
             <div className='relative flex flex-col h-full w-full overflow-hidden pb-24'>
                 <div className='grow overflow-y-auto flex flex-col gap-4 pr-2 pb-6'>
                     <div className='pb-2 border-b border-b-border-soft select-none'>
@@ -241,15 +253,32 @@ Rules:
                         </button>
                     </div>
 
-                    <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-text-muted select-none">
-                        <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                        <span>
-                            Active Engine: Groq {diffInput.trim().length < 12000 ? "Llama 3.1 8B" : "Llama 3.3 70B"}
-                        </span>
+                    <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-text-muted select-none h-4">
+                        {loading ? (
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
+                                <div className="w-24 h-2 bg-border-soft rounded-sm animate-pulse" />
+                            </div>
+                        ) : (
+                            <>
+                                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                                <span>
+                                    Active Engine: Groq {
+                                        actualModel === "llama-3.1-8b-instant" ? "Llama 3.1 8B" :
+                                        actualModel === "meta-llama/llama-4-scout-17b-16e-instruct" ? "Llama 4 Scout" :
+                                        actualModel === "groq/compound-mini" ? "Compound Mini" :
+                                        actualModel === "groq/compound" ? "Compound 70B" :
+                                        actualModel === "llama-3.3-70b-versatile" ? "Llama 3.3 70B" :
+                                        actualModel
+                                    }
+                                </span>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
 
+            {/* output */}
             <div className="relative flex flex-col h-full w-full bg-card border border-border-soft rounded-xl overflow-hidden shadow-2xl">
                 <div className="flex items-center justify-between px-4 py-3 bg-surface/80 border-b border-b-border-soft select-none">
                     <div className="flex items-center gap-1.5 w-1/4">
@@ -267,17 +296,29 @@ Rules:
                         {generatedMessage && !loading && (
                             <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 bg-success/10 border border-success/20 rounded-md text-[9px] font-mono text-success font-semibold select-none">
                                 <Check size={10} strokeWidth={3} />
-                                GENERATED
+                                {formatTime(elapsedTime)}
                             </span>
                         )}
                     </div>
                 </div>
 
-                <div className="grow p-6 overflow-y-auto select-text font-mono text-xs text-text-secondary leading-relaxed bg-surface/30">
-                    {generatedMessage ? (
+                <div className="grow min-h-0 p-6 overflow-y-auto select-text font-mono text-xs text-text-secondary leading-relaxed bg-surface/30">
+                    {loading ? (
+                        <div className="grow flex flex-col items-center justify-center text-center select-none py-12">
+                            <div className="w-48 h-48 select-none pointer-events-none">
+                                <DotLottieReact
+                                    src="https://lottie.host/65669eca-e62f-4494-b845-32c30c0ffe1e/aAUdADcyEr.json"
+                                    loop
+                                    autoplay
+                                />
+                            </div>
+                            <p className="text-xs font-mono text-accent animate-pulse mt-2 uppercase tracking-widest">Generating Message...</p>
+                            <p className="text-[10px] text-text-muted mt-1 max-w-xs font-sans">Translating code adjustments into professional conventional syntax...</p>
+                        </div>
+                    ) : generatedMessage ? (
                         <pre className="whitespace-pre-wrap select-all font-mono leading-relaxed">{generatedMessage}</pre>
                     ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center text-text-muted select-none my-12">
+                        <div className="grow flex flex-col items-center justify-center text-center text-text-muted select-none py-12">
                             <GitCommit size={32} className="opacity-40 mb-3" />
                             <p className="text-xs font-mono">Awaiting input changes...</p>
                             <p className="text-[10px] opacity-60 mt-1 max-w-xs font-sans">Paste a git diff or describe your changes to generate a semantic commit message.</p>

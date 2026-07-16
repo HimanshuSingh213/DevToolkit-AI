@@ -4,7 +4,7 @@ import { ContextProvider } from "@/context/AppContext";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "sonner";
 
-export default function RootLayout({
+export default function AppLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -12,13 +12,13 @@ export default function RootLayout({
   return (
     <SessionProvider refetchOnWindowFocus={false} refetchWhenOffline={false}>
       <ContextProvider>
-        <main
-          className={`h-full antialiased`}
-        >
+        <div className="h-screen w-full flex flex-col overflow-hidden antialiased bg-background">
           <NavBar />
           <Toaster theme="dark" closeButton richColors />
-          <body className="min-h-full flex flex-col">{children}</body>
-        </main>
+          <main className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
+            {children}
+          </main>
+        </div>
       </ContextProvider>
     </SessionProvider>
   );

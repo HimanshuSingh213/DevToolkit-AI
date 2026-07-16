@@ -5,6 +5,7 @@ import WorkspaceHub from '@/components/workspace/WorkspaceHub'
 import useApp from '@/context/AppContext'
 import ReadmeGenerator from '@/components/readme-generator/ReadmeGenerator'
 import CommitGenerator from '@/components/commit-msg-generator/CommitGenerator'
+import RegexGenerator from '@/components/regex-generator/RegexGenerator'
 
 const BackButton = ({ onClick }: { onClick: () => void }) => (
   <button
@@ -13,18 +14,6 @@ const BackButton = ({ onClick }: { onClick: () => void }) => (
   >
     ← Back to Workspace
   </button>
-)
-
-
-
-
-
-const RegexGenerator = ({ onBack }: { onBack: () => void }) => (
-  <div>
-    <BackButton onClick={onBack} />
-    <h2 className="text-2xl font-medium text-text mb-2">Regex Generator</h2>
-    <p className="text-sm text-text-muted font-light">Convert colloquial English requests into exact regex patterns.</p>
-  </div>
 )
 
 const JsonToolkit = ({ onBack }: { onBack: () => void }) => (
@@ -41,7 +30,7 @@ export default function page() {
   const handleBack = () => setActiveWindow('hub')
 
   return (
-    <div className='flex flex-1 flex-col w-full p-4 overflow-hidden'>
+    <div className='flex flex-col grow w-full h-full p-4 overflow-hidden min-h-0'>
       <AnimatePresence mode="wait">
         {activeWindow === 'hub' ? (
           <motion.div
@@ -60,11 +49,11 @@ export default function page() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.25, ease: "easeInOut" }}
-            className=''
+            className='w-full h-full flex flex-col grow min-h-0'
           >
             {activeWindow === 'readme' && <ReadmeGenerator />}
-            {activeWindow === 'commit' && <CommitGenerator onBack={handleBack} />}
-            {activeWindow === 'regex' && <RegexGenerator onBack={handleBack} />}
+            {activeWindow === 'commit' && <CommitGenerator />}
+            {activeWindow === 'regex' && <RegexGenerator />}
             {activeWindow === 'json' && <JsonToolkit onBack={handleBack} />}
           </motion.div>
         )}

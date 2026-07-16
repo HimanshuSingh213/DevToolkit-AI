@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, X, Folder, GitBranch, Loader2, Copy, Check } from 'lucide-react';
 import axios from 'axios';
@@ -117,7 +117,7 @@ ${techStack.join(", ")}
         return { owner, repo, branch };
     }
 
-    const repoInfo = parseGithubUrl(githubUrl);
+    const repoInfo = useMemo(() => parseGithubUrl(githubUrl), [githubUrl]);
 
     const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
@@ -215,7 +215,7 @@ ${techStack.join(", ")}
     };
 
     return (
-        <div className="w-full h-[calc(100vh-80px)] shrink-0 grid grid-cols-2 gap-4 overflow-hidden">
+        <div className="w-full h-full min-h-0 shrink-0 grid grid-cols-2 gap-4 overflow-hidden">
             {/* input side */}
             <div className='relative flex flex-col h-full w-full overflow-hidden pb-24'>
                 <div className='flex-1 overflow-y-auto flex flex-col gap-4 pr-2 pb-6'>
