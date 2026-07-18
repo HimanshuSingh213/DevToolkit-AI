@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { BookOpen, GitCommit, Code2, Binary, Database, ArrowRight } from 'lucide-react'
+import HistorySection from './HistorySection'
 
 type WindowType = 'hub' | 'readme' | 'commit' | 'regex' | 'json'
 
@@ -46,7 +47,7 @@ export default function WorkspaceHub() {
   const { setActiveWindow } = useApp()
 
   return (
-    <div className="flex flex-col space-y-8">
+    <div className="flex flex-col space-y-8 ">
       {/* Heading Section */}
       <div className='flex flex-col items-start justify-center gap-2'>
         <div className='flex flex-row gap-2'>
@@ -106,6 +107,7 @@ export default function WorkspaceHub() {
           )
         })}
       </div>
+      <HistorySection />
     </div>
   )
 }

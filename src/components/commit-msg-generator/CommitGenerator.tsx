@@ -7,6 +7,7 @@ import CopyButton from '@/components/CopyButton';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import useApp from '@/context/AppContext';
 
 const preprocessDiff = (diff: string): string => {
     if (!diff) return "";
@@ -17,6 +18,9 @@ const preprocessDiff = (diff: string): string => {
 };
 
 export default function CommitGenerator() {
+    const { dailyUsage, dailyLimit, updateUsage, fetchUsage } = useApp();
+    const isLimitExceeded = dailyUsage >= dailyLimit;
+
     const [diffInput, setDiffInput] = useState("");
     const [tone, setTone] = useState<"conventional" | "emoji" | "minimalist">("conventional");
     const [loading, setLoading] = useState(false);
@@ -106,18 +110,33 @@ Rules:
             });
 
             if (response.data.success) {
-                setGeneratedMessage(response.data.data.text);
-                setActualModel(response.data.data.modelUsed);
+                const messageText = response.data.data.result.text;
+                setGeneratedMessage(messageText);
+                setActualModel(response.data.data.result.modelUsed);
                 toast.success("Commit message generated successfully!");
+                if (response.data.data.usage) {
+                    updateUsage(response.data.data.usage);
+                }
+                
+                // Save to history
+                axios.post("/api/history", {
+                    tool: "commit",
+                    title: messageText.trim(),
+                    output: messageText
+                }).catch(err => console.error("History tracking failed:", err));
             } else {
-                toast.error("Failed to generate commit message. Please try again.");
+                toast.error(response.data.error || "Failed to generate commit message. Please try again.");
             }
         } catch (error: any) {
             if (axios.isCancel(error)) {
                 console.log("Request aborted.");
                 return;
             }
-            toast.error("Failed to generate commit message. Please try again.");
+            if (error.response?.status === 429) {
+                fetchUsage();
+            }
+            const serverError = error.response?.data?.error || error.message;
+            toast.error(serverError || "Failed to generate commit message. Please try again.");
         } finally {
             if (abortControllerRef.current === controller) {
                 abortControllerRef.current = null;
@@ -244,15 +263,15 @@ Rules:
                         <button
                             type="button"
                             onClick={handleGenerate}
-                            disabled={loading}
+                            disabled={loading || isLimitExceeded}
                             className="relative z-20 w-full bg-text text-background font-semibold py-2.5 rounded-lg hover:bg-text-secondary transition duration-200 cursor-pointer shadow-md select-none text-sm tracking-wide flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed border-none outline-none"
                         >
                             {loading && <Loader2 size={16} className="animate-spin" />}
-                            Generate Commit Message
+                            {isLimitExceeded ? "Daily Limit Exceeded" : "Generate Commit Message"}
                         </button>
                     </div>
 
-                    <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-text-muted select-none h-4">
+                    <div className="flex items-center justify-between px-1 text-[10px] font-mono text-text-muted select-none h-4">
                         {loading ? (
                             <div className="flex items-center gap-1.5">
                                 <div className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
@@ -260,16 +279,21 @@ Rules:
                             </div>
                         ) : (
                             <>
-                                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                                <span className="flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                                    <span>
+                                        Active Engine: Groq {
+                                            actualModel === "llama-3.1-8b-instant" ? "Llama 3.1 8B" :
+                                                actualModel === "meta-llama/llama-4-scout-17b-16e-instruct" ? "Llama 4 Scout" :
+                                                    actualModel === "groq/compound-mini" ? "Compound Mini" :
+                                                        actualModel === "groq/compound" ? "Compound 70B" :
+                                                            actualModel === "llama-3.3-70b-versatile" ? "Llama 3.3 70B" :
+                                                                actualModel
+                                        }
+                                    </span>
+                                </span>
                                 <span>
-                                    Active Engine: Groq {
-                                        actualModel === "llama-3.1-8b-instant" ? "Llama 3.1 8B" :
-                                            actualModel === "meta-llama/llama-4-scout-17b-16e-instruct" ? "Llama 4 Scout" :
-                                                actualModel === "groq/compound-mini" ? "Compound Mini" :
-                                                    actualModel === "groq/compound" ? "Compound 70B" :
-                                                        actualModel === "llama-3.3-70b-versatile" ? "Llama 3.3 70B" :
-                                                            actualModel
-                                    }
+                                    Usage: {dailyUsage}/{dailyLimit} req today
                                 </span>
                             </>
                         )}

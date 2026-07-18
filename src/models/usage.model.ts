@@ -1,7 +1,8 @@
-import mongoose, { model, models, ObjectId, Schema } from "mongoose";
+import mongoose, { model, models, Schema, Document, Types } from "mongoose";
+import { DAILY_RATE_LIMIT } from "@/lib/constants";
 
-export interface Usage {
-    userId: ObjectId,
+export interface Usage extends Document {
+    userId: Types.ObjectId | string,
     dailyUsage: number,
     dailyLimit: number,
     lastReset: Date,
@@ -18,12 +19,12 @@ const usageSchema = new Schema<Usage>({
     },
     dailyUsage: {
         type: Number,
-        max: 100,
+        max: DAILY_RATE_LIMIT,
         default: 0
     },
     dailyLimit: {
         type: Number,
-        default: 100
+        default: DAILY_RATE_LIMIT
     },
     lastReset: {
         type: Date,

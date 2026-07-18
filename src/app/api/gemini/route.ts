@@ -2,9 +2,19 @@ import { NextResponse } from 'next/server'
 import { generateReadmeFromGithub, generateReadmeFromManual } from '@/lib/geminiService'
 import { readmeRequestSchema } from '@/validations/readme.validation'
 import { ApiResponse } from '@/types/ApiResponse'
+import { auth } from '@/auth'
+import { checkAndIncrementUsage } from '@/lib/rateLimiter'
 
 export async function POST(req: Request) {
   try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: "Unauthorized access. Please login first."
+      }, { status: 401 })
+    }
+
     const body = await req.json()
     
     // Zod input validation check
@@ -14,6 +24,17 @@ export async function POST(req: Request) {
         success: false,
         error: validationResult.error.issues[0].message
       }, { status: 400 })
+    }
+
+    // Rate Limit check
+    let limitStatus;
+    try {
+      limitStatus = await checkAndIncrementUsage(session.user.id)
+    } catch (limitErr: any) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: limitErr.message || "Rate limit reached."
+      }, { status: 429 })
     }
 
     const validatedData = validationResult.data
@@ -29,7 +50,10 @@ export async function POST(req: Request) {
     return NextResponse.json<ApiResponse>({
       success: true,
       message: "README generated successfully",
-      data: result
+      data: {
+        ...result,
+        usage: limitStatus
+      }
     })
   } catch (err: any) {
     return NextResponse.json<ApiResponse>({

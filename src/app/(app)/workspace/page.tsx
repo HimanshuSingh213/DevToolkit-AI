@@ -6,23 +6,7 @@ import useApp from '@/context/AppContext'
 import ReadmeGenerator from '@/components/readme-generator/ReadmeGenerator'
 import CommitGenerator from '@/components/commit-msg-generator/CommitGenerator'
 import RegexGenerator from '@/components/regex-generator/RegexGenerator'
-
-const BackButton = ({ onClick }: { onClick: () => void }) => (
-  <button
-    onClick={onClick}
-    className="inline-flex items-center text-sm text-text-muted hover:text-text gap-1 mb-4 transition cursor-pointer bg-transparent border-none outline-none"
-  >
-    ← Back to Workspace
-  </button>
-)
-
-const JsonToolkit = ({ onBack }: { onBack: () => void }) => (
-  <div>
-    <BackButton onClick={onBack} />
-    <h2 className="text-2xl font-medium text-text mb-2">JSON Toolkit</h2>
-    <p className="text-sm text-text-muted font-light">Synthesize, validate, and beautify JSON hierarchies.</p>
-  </div>
-)
+import JsonToolkit from '@/components/json-toolkit/JsonToolkit'
 
 export default function page() {
   const { activeWindow, setActiveWindow } = useApp()
@@ -30,7 +14,7 @@ export default function page() {
   const handleBack = () => setActiveWindow('hub')
 
   return (
-    <div className='flex flex-col grow w-full h-full p-4 overflow-hidden min-h-0'>
+    <div className={`flex flex-col grow w-full h-full p-4 min-h-0 ${activeWindow === 'hub' ? 'overflow-y-auto' : 'overflow-hidden'}`}>
       <AnimatePresence mode="wait">
         {activeWindow === 'hub' ? (
           <motion.div
@@ -54,7 +38,7 @@ export default function page() {
             {activeWindow === 'readme' && <ReadmeGenerator />}
             {activeWindow === 'commit' && <CommitGenerator />}
             {activeWindow === 'regex' && <RegexGenerator />}
-            {activeWindow === 'json' && <JsonToolkit onBack={handleBack} />}
+            {activeWindow === 'json' && <JsonToolkit />}
           </motion.div>
         )}
       </AnimatePresence>

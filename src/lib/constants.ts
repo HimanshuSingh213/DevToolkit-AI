@@ -3,6 +3,8 @@ export const keysPool = ApiKeys?.split(",").map(key => key.trim()).filter(Boolea
 export const totalKeysCount = keysPool.length;
 let APIIndex = 0;
 
+export const DAILY_RATE_LIMIT = process.env.DAILY_RATE_LIMIT ? parseInt(process.env.DAILY_RATE_LIMIT, 10) : 80;
+
 // selects the api keys one by one 
 export default function getAPIkeys(): string {
     if (keysPool.length === 0) return "";

@@ -1,12 +1,13 @@
 "use client"
 
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Loader2, Regex, Copy } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { regexRequestSchema } from '@/validations/regex.validation';
 import { toast } from 'sonner';
 import axios from 'axios';
+import useApp from '@/context/AppContext';
 
 interface ExplanationItem {
     token: string;
@@ -27,6 +28,8 @@ interface RegexData {
 
 
 export default function RegexGenerator() {
+    const { dailyUsage, dailyLimit, updateUsage, fetchUsage } = useApp();
+    const isLimitExceeded = dailyUsage >= dailyLimit;
 
     const [matchInput, setMatchInput] = useState("");
     const [loading, setLoading] = useState(false);
@@ -35,7 +38,6 @@ export default function RegexGenerator() {
     const abortControllerRef = useRef<AbortController | null>(null);
 
     const [regexData, setRegexData] = useState<RegexData | null>(null);
-    const [customTestValue, setCustomTestValue] = useState("");
     const [copiedRaw, setCopiedRaw] = useState(false);
     const [copiedLiteral, setCopiedLiteral] = useState(false);
 
@@ -60,13 +62,13 @@ export default function RegexGenerator() {
         };
     }, []);
 
-    const formatTime = (time: number): string => {
+    const formatTime = useCallback((time: number): string => {
         const mins = Math.floor(time / 60);
         const sec = Math.floor(time % 60);
         return `${mins.toString().padStart(2, '0')}:${sec.toString().padStart(2, "0")}`;
-    };
+    }, []);
 
-    const handleGenerate = async () => {
+    const handleGenerate = useCallback(async () => {
         const validation = regexRequestSchema.safeParse({ matchInput });
         if (!validation.success) {
             toast.error(validation.error.issues[0].message);
@@ -83,13 +85,13 @@ export default function RegexGenerator() {
 
         setLoading(true);
         setRegexData(null);
-        setCustomTestValue("");
 
         const systemConfig = `You are an expert Regular Expression (Regex) assistant. Your job is to output a strictly formatted JSON object containing a generated regex pattern, a        
   step-by-step breakdown explanation of the tokens, and exactly 4 comprehensive test cases representing acceptable and unacceptable inputs.
 
     The output MUST be a valid JSON object matching this exact schema:
     {
+      "title": "A short, descriptive 3-6 word title in English of what this regex does (e.g., 'Email Address Validator')",
       "regex": "the regex string pattern (properly escaped for JSON, e.g. use double backslashes \\\\d)",
       "explanation": [
         { "token": "^", "meaning": "Asserts start of line" },
@@ -115,25 +117,41 @@ export default function RegexGenerator() {
             }, { signal: controller.signal });
 
             if (res.data.success) {
-                setRegexData(JSON.parse(res.data.data.text));
-                setActualModel(res.data.data.modelUsed);
+                const parsed = JSON.parse(res.data.data.result.text);
+                setRegexData(parsed);
+                setActualModel(res.data.data.result.modelUsed);
                 toast.success("Regex created successfully.")
+                if (res.data.data.usage) {
+                    updateUsage(res.data.data.usage);
+                }
+                
+                // Save to history
+                const patternTitle = parsed.title || `Regex: ${parsed.regex}`;
+                axios.post("/api/history", {
+                    tool: "regex",
+                    title: patternTitle,
+                    output: res.data.data.result.text
+                }).catch(err => console.error("History tracking failed:", err));
             }
             else {
-                toast.error("Failed to generate regex. Please try again.")
+                toast.error(res.data.error || "Failed to generate regex. Please try again.")
             }
         } catch (err: any) {
             if (axios.isCancel(err)) {
                 console.log("Request aborted.")
             }
             else {
-                toast.error("Failed to generate regex. Please try again.")
+                if (err.response?.status === 429) {
+                    fetchUsage();
+                }
+                const serverError = err.response?.data?.error || err.message;
+                toast.error(serverError || "Failed to generate regex. Please try again.")
             }
         }
         finally {
             setLoading(false);
         }
-    }
+    }, [matchInput, fetchUsage, updateUsage]);
 
     const handleCopyRaw = useCallback(async () => {
 
@@ -227,25 +245,30 @@ export default function RegexGenerator() {
                         <button
                             type="button"
                             onClick={handleGenerate}
-                            disabled={loading}
+                            disabled={loading || isLimitExceeded}
                             className="relative z-20 w-full bg-text text-background font-semibold py-2.5 rounded-lg hover:bg-text-secondary transition duration-200 cursor-pointer shadow-md select-none text-sm tracking-wide flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed border-none outline-none"
                         >
                             {loading && <Loader2 size={16} className="animate-spin" />}
-                            Generate Commit Message
+                            {isLimitExceeded ? "Daily Limit Exceeded" : "Generate Regex Pattern"}
                         </button>
                     </div>
 
-                    <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-text-muted select-none">
-                        <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                    <div className="flex items-center justify-between px-1 text-[10px] font-mono text-text-muted select-none">
+                        <span className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                            <span>
+                                Active Engine: Groq {
+                                    actualModel === "llama-3.1-8b-instant" ? "Llama 3.1 8B" :
+                                        actualModel === "meta-llama/llama-4-scout-17b-16e-instruct" ? "Llama 4 Scout" :
+                                            actualModel === "groq/compound-mini" ? "Compound Mini" :
+                                                actualModel === "groq/compound" ? "Compound 70B" :
+                                                    actualModel === "llama-3.3-70b-versatile" ? "Llama 3.3 70B" :
+                                                        actualModel
+                                }
+                            </span>
+                        </span>
                         <span>
-                            Active Engine: Groq {
-                                actualModel === "llama-3.1-8b-instant" ? "Llama 3.1 8B" :
-                                    actualModel === "meta-llama/llama-4-scout-17b-16e-instruct" ? "Llama 4 Scout" :
-                                        actualModel === "groq/compound-mini" ? "Compound Mini" :
-                                            actualModel === "groq/compound" ? "Compound 70B" :
-                                                actualModel === "llama-3.3-70b-versatile" ? "Llama 3.3 70B" :
-                                                    actualModel
-                            }
+                            Usage: {dailyUsage}/{dailyLimit} req today
                         </span>
                     </div>
                 </div>

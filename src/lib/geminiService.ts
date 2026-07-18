@@ -178,12 +178,8 @@ const generateRepoSummary = async (
             return res.text || "";
         } catch (err: any) {
             lastError = err;
-            const isRateLimit = err?.status === 429 ||
-                err?.message?.toLowerCase().includes("quota") ||
-                err?.message?.includes("429");
-
-            if (isRateLimit && attempt < maxAttempts - 1) {
-                console.warn("Key rate limit hit. Retrying with next key...");
+            console.warn(`[Gemini Pipeline] Layer 1 - Key attempt ${attempt + 1} failed: ${err.message || err}.`);
+            if (attempt < maxAttempts - 1) {
                 continue;
             }
             throw err;
@@ -228,12 +224,8 @@ const polishManualInput = async (manualData: string): Promise<string> => {
             return res.text || "";
         } catch (err: any) {
             lastError = err;
-            const isRateLimit = err?.status === 429 ||
-                err?.message?.toLowerCase().includes("quota") ||
-                err?.message?.includes("429");
-
-            if (isRateLimit && attempt < maxAttempts - 1) {
-                console.warn("Key rate limit hit. Retrying with next key...");
+            console.warn(`[Gemini Pipeline] Manual Polisher - Key attempt ${attempt + 1} failed: ${err.message || err}.`);
+            if (attempt < maxAttempts - 1) {
                 continue;
             }
             throw err;
@@ -317,14 +309,10 @@ const generateFinalReadme = async (
             return res.text || "";
         } catch (err: any) {
             lastError = err;
-            const isRateLimit = err?.status === 429 ||
-                err?.message?.toLowerCase().includes("quota") ||
-                err?.message?.includes("429");
-
-            if (isRateLimit && attempt < maxAttempts - 1) {
+            console.warn(`[Gemini Pipeline] Layer 2 - Key attempt ${attempt + 1} failed: ${err.message || err}.`);
+            if (attempt < maxAttempts - 1) {
                 continue;
             }
-
             throw err;
         }
 
@@ -334,14 +322,72 @@ const generateFinalReadme = async (
 
 }
 
+const verifyRepoSummary = async (
+    rawSpecSheet: string,
+    folderTree: string,
+    customInstructions?: string
+): Promise<string> => {
+    let prompt = `You are an elite code structure auditor. Your job is to verify and correct an initial project technical specification sheet against the actual folder tree structure of the repository.\n\n`;
+    prompt += `Actual Folder Tree:\n${folderTree}\n\n`;
+    prompt += `Initial Technical Spec Sheet:\n${rawSpecSheet}\n\n`;
+
+    if (customInstructions) {
+        prompt += `USER CUSTOM FOCUS REQUEST: Focus specifically on: "${customInstructions}". Ensure this aspect is preserved.\n\n`;
+    }
+
+    prompt += `Audit Instructions:\n`;
+    prompt += `1. Compare the files, directories, and architecture described in the "Initial Technical Spec Sheet" with the "Actual Folder Tree".\n`;
+    prompt += `2. If the spec sheet mentions ANY file name, directory, or module path that does NOT exist in the "Actual Folder Tree", remove it or correct it to match the actual folder structure. Do not allow any hallucinated files or folders.\n`;
+    prompt += `3. Keep the verified tech stack, features, and config analysis, but ensure the structural details are 100% accurate.\n`;
+    prompt += `4. Output ONLY the audited, corrected technical spec sheet. Do not write introductory or outro remarks.`;
+
+    const systemInstruction = "You are a precise technical spec auditor. Remove all hallucinated files and folders from the technical spec sheet so that it matches the actual folder tree exactly. Output only the corrected technical spec sheet.";
+
+    let lastError: any = null;
+    const maxAttempts = Math.max(totalKeysCount, 1);
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const apiKey = getAPIkey();
+        if (!apiKey) throw new Error("No API keys found.");
+
+        const ai = new GoogleGenAI({ apiKey });
+
+        try {
+            console.log(`[Gemini Pipeline] Verification Layer - Auditing codebase summary for structural accuracy using model: ${MODEL_L1}`);
+            const res = await ai.models.generateContent({
+                model: MODEL_L1,
+                contents: prompt,
+                config: {
+                    systemInstruction: systemInstruction,
+                    temperature: 0.1,
+                    maxOutputTokens: 8192
+                }
+            });
+            console.log(`[Gemini Pipeline] Verification Layer - Summary auditing completed successfully!`);
+            return res.text || "";
+        } catch (err: any) {
+            lastError = err;
+            console.warn(`[Gemini Pipeline] Verification Layer - Key attempt ${attempt + 1} failed: ${err.message || err}.`);
+            if (attempt < maxAttempts - 1) {
+                continue;
+            }
+            throw err;
+        }
+    }
+    throw new Error(`All API keys exhausted in Verification Layer. Last Error: ${lastError?.message}`);
+}
+
 export const generateReadmeFromGithub = async (githubUrl: string, customInstructions?: string) => {
     // scraping the repository layout and config files
     const repoData = await scrapegithubRepository(githubUrl);
 
     // Layer 1 llm for ingesting folder tree and file contents to build spec sheet
-    const specSheet = await generateRepoSummary(repoData.folderTree, repoData.codeContext, customInstructions);
+    const rawSpecSheet = await generateRepoSummary(repoData.folderTree, repoData.codeContext, customInstructions);
 
-    // Layer 2 llm for creating the final markdown from spec sheet
+    // Auditing layer to cross-check file structural claims against actual layout
+    const specSheet = await verifyRepoSummary(rawSpecSheet, repoData.folderTree, customInstructions);
+
+    // Layer 2 llm for creating the final markdown from audited spec sheet
     const readme = await generateFinalReadme(specSheet, customInstructions);
 
     return {
