@@ -15,7 +15,7 @@ export async function checkAndIncrementUsage(userId: string) {
                 lastReset: now
             }
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: "after" }
     );
 
     if (!usage) {

@@ -1,7 +1,9 @@
 import Groq from "groq-sdk";
+import { generateGeminiFallback } from "./geminiService";
 
 const groq = new Groq({
-    apiKey: process.env.GROK_API_KEY
+    apiKey: process.env.GROK_API_KEY,
+    maxRetries: 0
 });
 
 const getFallbackSequence = (): string[] => {
@@ -58,9 +60,24 @@ export const GenerateGrokOutput = async (
                 throw err;
             }
 
+            const isRateLimit = err?.status === 429 || err?.statusCode === 429 || err?.message?.includes("429") || err?.message?.toLowerCase().includes("rate limit");
+            if (isRateLimit) {
+                const retryAfterSeconds = parseFloat(err.headers?.['retry-after'] || '2');
+                console.warn(`[Groq Service] Model ${currentModel} rate limited. Waiting ${retryAfterSeconds}s before switching...`);
+                await new Promise((resolve) => setTimeout(resolve, retryAfterSeconds * 1000));
+            }
+
             console.warn(`[Groq Service] Error on ${currentModel} (retrying next model in chain): ${err.message || err}`);
         }
     }
 
-    throw new Error(lastError?.message || 'Failed to generate AI response across all models');
+    try {
+        console.log(`[Groq Service] All Groq fallback models failed. Routing to Gemini fallback queue...`);
+        const geminiResult = await generateGeminiFallback(systemConfig, userPrompt);
+        console.log(`[Groq Service] Gemini fallback succeeded with model: ${geminiResult.modelUsed}`);
+        return geminiResult;
+    } catch (fallbackErr: any) {
+        console.error(`[Groq Service] Gemini fallback failed:`, fallbackErr.message || fallbackErr);
+        throw new Error(lastError?.message || 'Failed to generate AI response across all models');
+    }
 };

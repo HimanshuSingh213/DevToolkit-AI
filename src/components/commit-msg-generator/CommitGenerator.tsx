@@ -79,12 +79,21 @@ export default function CommitGenerator() {
         setLoading(true);
         setGeneratedMessage("");
 
-        const systemConfig = `You are an expert git semantic commit message engine. Your task is to output a single, professionally formatted commit message based on the user's input.
+        const systemConfig = `You are an expert git semantic commit message engine. Your task is to output a strictly formatted JSON object containing a short title and a conventional commit message based on the user's input.
 
-CRITICAL RULES:
-- SINGLE SENTENCE FORMAT: The output must contain EXACTLY one single line of text (one sentence). Do NOT output multiple lines, bullet points, bodies, or footers.
+    The output MUST be a valid JSON object matching this exact schema:
+    {
+      "title": "A short, descriptive 3-5 word summary in English of the changes (e.g. 'Implement OAuth Logins')",
+      "commitMessage": "the conventional commit message generated based on the selected tone style"
+    }
+
+CRITICAL SEMANTIC COMMIT RULES (for the "commitMessage" value):
+- GITHUB STANDARD CONVENTIONAL COMMITS: Use standard conventional commit types (e.g. 'feat' for new features, 'fix' for bug fixes, 'refactor' for code refactoring, 'docs' for documentation, 'chore' for build/dependencies, 'style' for formatting, 'perf' for performance).
+- SINGLE SENTENCE FORMAT: The "commitMessage" must contain EXACTLY one single line of text (one sentence). Do NOT output multiple lines, bullet points, bodies, or footers.
 - MULTIPLE CHANGES: If there are multiple distinct logical changes, combine them into that single sentence using commas to separate them. Structure: <type>(<scope>): <change 1>, <change 2>, <change 3> (e.g. 'feat(workspace): implement commit message generator, refactor groq fallback logic, fix toast error handling').
-- HIERARCHY OF IMPORTANCE (PRIORITIZE LARGE CHANGES): Always describe the largest, most significant code changes first (e.g. new pages, major hooks, logic rewrites). Medium changes go second. 
+- STRICT HIERARCHY OF IMPORTANCE: Prioritize describing the biggest changes first (e.g., new file additions, major feature implementations, main hooks/functions), followed by code refactors, and then medium changes.
+- IGNORE MINOR CHANGES: Do NOT list or count very minor changes (such as formatting tweaks, white-space cleanup, fixing minor spelling typos, or trivial comments) unless they are the ONLY changes present in the input.
+- ANTI-HALLUCINATION RULE: Describe ONLY changes that are explicitly visible in the provided git diff or summary. Do NOT assume, speculate, or fabricate files, libraries, functions, or features that are not explicitly present in the input.
 - CONFIG FILE PRIORITY: Do NOT mention configuration file changes (like package.json, next.config, eslint, lockfiles, etc.) unless they are the ONLY changes present in the entire git diff. If there are other source code changes, ignore config changes completely.
 - IMPERATIVE MOOD: Use present-tense, imperative mood for all actions (e.g., 'implement', 'refactor', 'fix', 'add' instead of 'implemented', 'refactored', 'fixed', 'added').
 - TONE STYLES:
@@ -93,7 +102,7 @@ CRITICAL RULES:
   - If tone is 'minimalist': Output a strictly single-line, direct description (no conventional prefix, no scope, no emojis, e.g. 'implement commit generator, refactor fallback logic').
 
 Rules:
-- Output ONLY the raw one-sentence commit message.
+- Output ONLY the raw JSON object.
 - DO NOT wrap the output in markdown code blocks (\`\`\`), and do not write introduction or outro remarks.`;
 
         const userPrompt = `Selected Tone Style: ${tone}\n\nUser Input (Git Diff or Summary):\n${cleanedDiff.trim()}`;
@@ -110,8 +119,20 @@ Rules:
             });
 
             if (response.data.success) {
-                const messageText = response.data.data.result.text;
-                setGeneratedMessage(messageText);
+                const rawText = response.data.data.result.text;
+                let commitMessage = "";
+                let historyTitle = "";
+
+                try {
+                    const parsed = JSON.parse(rawText.trim());
+                    commitMessage = parsed.commitMessage || rawText;
+                    historyTitle = parsed.title || commitMessage.split("\n")[0].trim();
+                } catch {
+                    commitMessage = rawText.trim();
+                    historyTitle = commitMessage.split("\n")[0].trim();
+                }
+
+                setGeneratedMessage(commitMessage);
                 setActualModel(response.data.data.result.modelUsed);
                 toast.success("Commit message generated successfully!");
                 if (response.data.data.usage) {
@@ -121,11 +142,18 @@ Rules:
                 // Save to history
                 axios.post("/api/history", {
                     tool: "commit",
-                    title: messageText.trim(),
-                    output: messageText
+                    title: historyTitle.slice(0, 150),
+                    output: commitMessage
                 }).catch(err => console.error("History tracking failed:", err));
             } else {
-                toast.error(response.data.error || "Failed to generate commit message. Please try again.");
+                const apiError = response.data.error || "";
+                if (apiError.toLowerCase().includes("too large") || apiError.toLowerCase().includes("413") || apiError.toLowerCase().includes("tpm") || apiError.toLowerCase().includes("tokens")) {
+                    toast.error("The changes are too large for the AI model. Please reduce the size of your input and try again.");
+                } else if (apiError.toLowerCase().includes("rate limit") || apiError.toLowerCase().includes("429") || apiError.toLowerCase().includes("limit exceeded")) {
+                    toast.error("API rate limit reached. Please wait a few seconds and try again.");
+                } else {
+                    toast.error("Failed to generate commit message. Please try again.");
+                }
             }
         } catch (error: any) {
             if (axios.isCancel(error)) {
@@ -135,8 +163,14 @@ Rules:
             if (error.response?.status === 429) {
                 fetchUsage();
             }
-            const serverError = error.response?.data?.error || error.message;
-            toast.error(serverError || "Failed to generate commit message. Please try again.");
+            const serverError = error.response?.data?.error || error.message || "";
+            if (serverError.toLowerCase().includes("too large") || serverError.toLowerCase().includes("413") || serverError.toLowerCase().includes("tpm") || serverError.toLowerCase().includes("tokens")) {
+                toast.error("The changes are too large for the AI model. Please reduce the size of your input and try again.");
+            } else if (serverError.toLowerCase().includes("rate limit") || serverError.toLowerCase().includes("429") || serverError.toLowerCase().includes("limit exceeded")) {
+                toast.error("API rate limit reached. Please wait a few seconds and try again.");
+            } else {
+                toast.error("Failed to generate commit message. Please try again.");
+            }
         } finally {
             if (abortControllerRef.current === controller) {
                 abortControllerRef.current = null;

@@ -23,7 +23,7 @@ export async function GET() {
                     lastReset: now
                 }
             },
-            { upsert: true, new: true }
+            { upsert: true, returnDocument: 'after' }
         );
 
         if (!usage) {

@@ -125,8 +125,7 @@ export default function RegexGenerator() {
                     updateUsage(res.data.data.usage);
                 }
                 
-                // Save to history
-                const patternTitle = parsed.title || `Regex: ${parsed.regex}`;
+                const patternTitle = (parsed.title || `Regex: ${parsed.regex}`).slice(0, 150);
                 axios.post("/api/history", {
                     tool: "regex",
                     title: patternTitle,
@@ -134,7 +133,14 @@ export default function RegexGenerator() {
                 }).catch(err => console.error("History tracking failed:", err));
             }
             else {
-                toast.error(res.data.error || "Failed to generate regex. Please try again.")
+                const apiError = res.data.error || "";
+                if (apiError.toLowerCase().includes("too large") || apiError.toLowerCase().includes("413") || apiError.toLowerCase().includes("tpm") || apiError.toLowerCase().includes("tokens")) {
+                    toast.error("The request is too large for the AI model. Please reduce the size of your input and try again.");
+                } else if (apiError.toLowerCase().includes("rate limit") || apiError.toLowerCase().includes("429") || apiError.toLowerCase().includes("limit exceeded")) {
+                    toast.error("API rate limit reached. Please wait a few seconds and try again.");
+                } else {
+                    toast.error("Failed to generate regex. Please try again.");
+                }
             }
         } catch (err: any) {
             if (axios.isCancel(err)) {
@@ -144,8 +150,14 @@ export default function RegexGenerator() {
                 if (err.response?.status === 429) {
                     fetchUsage();
                 }
-                const serverError = err.response?.data?.error || err.message;
-                toast.error(serverError || "Failed to generate regex. Please try again.")
+                const serverError = err.response?.data?.error || err.message || "";
+                if (serverError.toLowerCase().includes("too large") || serverError.toLowerCase().includes("413") || serverError.toLowerCase().includes("tpm") || serverError.toLowerCase().includes("tokens")) {
+                    toast.error("The request is too large for the AI model. Please reduce the size of your input and try again.");
+                } else if (serverError.toLowerCase().includes("rate limit") || serverError.toLowerCase().includes("429") || serverError.toLowerCase().includes("limit exceeded")) {
+                    toast.error("API rate limit reached. Please wait a few seconds and try again.");
+                } else {
+                    toast.error("Failed to generate regex. Please try again.");
+                }
             }
         }
         finally {

@@ -207,22 +207,29 @@ ${techStack.join(", ")}
                 }
                 
                 // Save to history
-                let docTitle = "README.md Generation";
-                if (isManual === "github") {
-                    const match = githubUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
-                    docTitle = match ? `README.md for ${match[2]}` : "README.md for GitHub Repo";
+                let docTitle = "";
+                const h1Match = generatedReadme.match(/^#\s+(.+)$/m);
+                if (h1Match && h1Match[1]) {
+                    docTitle = h1Match[1].trim();
                 } else {
-                    docTitle = `README.md for ${title || "Manual Input"}`;
+                    if (isManual === "github") {
+                        const match = githubUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+                        docTitle = match ? `README.md for ${match[2]}` : "README.md for GitHub Repo";
+                    } else {
+                        docTitle = `README.md for ${title || "Manual Input"}`;
+                    }
                 }
                 axios.post("/api/history", {
                     tool: "readme",
-                    title: docTitle,
+                    title: docTitle.slice(0, 150),
                     output: generatedReadme
                 }).catch(err => console.error("History tracking failed:", err));
             } else {
-                const apiError = response.data.error;
-                if (apiError && (apiError.toLowerCase().includes("repository") || apiError.toLowerCase().includes("github") || apiError.toLowerCase().includes("limit"))) {
-                    toast.error(apiError);
+                const apiError = response.data.error || "";
+                if (apiError.toLowerCase().includes("private") || apiError.toLowerCase().includes("not found")) {
+                    toast.error("GitHub repository not found or is private. Ensure the URL is public.");
+                } else if (apiError.toLowerCase().includes("rate limit") || apiError.toLowerCase().includes("limit")) {
+                    toast.error("API rate limit exceeded. Please try again later.");
                 } else {
                     toast.error("Failed to generate README. Please try again.");
                 }
@@ -234,10 +241,14 @@ ${techStack.join(", ")}
             }
             if (error.response?.status === 429) {
                 fetchUsage();
+                toast.error("API rate limit exceeded. Please try again later.");
+                return;
             }
-            const serverError = error.response?.data?.error || error.message;
-            if (serverError && (serverError.toLowerCase().includes("repository") || serverError.toLowerCase().includes("github") || serverError.toLowerCase().includes("limit"))) {
-                toast.error(serverError);
+            const serverError = error.response?.data?.error || error.message || "";
+            if (serverError.toLowerCase().includes("private") || serverError.toLowerCase().includes("not found")) {
+                toast.error("GitHub repository not found or is private. Ensure the URL is public.");
+            } else if (serverError.toLowerCase().includes("rate limit") || serverError.toLowerCase().includes("limit")) {
+                toast.error("API rate limit exceeded. Please try again later.");
             } else {
                 toast.error("Failed to generate README. Please try again.");
             }
@@ -315,13 +326,12 @@ ${techStack.join(", ")}
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs font-mono text-text-muted uppercase tracking-wider">Custom Focus (Optional)</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. focus on auth and database setup"
+                                    <label className="text-xs font-mono text-text-muted uppercase tracking-wider px-1">Custom Focus (Optional)</label>
+                                    <textarea
+                                        placeholder="e.g. focus on auth and database setup, explain the Docker configuration, list all key config files..."
                                         value={customInstructions}
                                         onChange={(e) => setCustomInstructions(e.target.value)}
-                                        className="w-full px-3 py-2 bg-surface border border-border-soft rounded-lg text-text text-sm outline-none focus:outline-none focus:border-accent transition duration-200"
+                                        className="w-full min-h-[100px] px-3 py-2.5 bg-surface border border-border-soft rounded-lg text-text text-sm outline-none focus:outline-none focus:border-accent transition duration-200 resize-y leading-relaxed"
                                     />
                                 </div>
                             </motion.div>
