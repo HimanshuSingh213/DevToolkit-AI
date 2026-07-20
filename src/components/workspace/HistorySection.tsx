@@ -34,7 +34,6 @@ export default function HistorySection() {
                 setHasMore(moreAvailable);
             }
         } catch (err) {
-            console.error("Failed to load history:", err);
             toast.error("Failed to load history entries.");
         } finally {
             setLoading(false);

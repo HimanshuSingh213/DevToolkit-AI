@@ -73,7 +73,7 @@ export default function JsonToolkit() {
                     tool: "json",
                     title: "Formatted JSON payload",
                     output: formatted
-                }).catch((err: any) => console.error("History tracking failed:", err));
+                }).catch(() => {});
             } else if (activeMode === 'minify') {
                 const minified = JSON.stringify(parsed);
                 setProcessedOutput(minified);
@@ -83,7 +83,7 @@ export default function JsonToolkit() {
                     tool: "json",
                     title: "Minified JSON payload",
                     output: minified
-                }).catch((err: any) => console.error("History tracking failed:", err));
+                }).catch(() => {});
             } else if (activeMode === 'validate') {
                 setIsProcessed(true);
                 toast.success("JSON is valid!");
@@ -91,7 +91,7 @@ export default function JsonToolkit() {
                     tool: "json",
                     title: "Validated JSON schema",
                     output: JSON.stringify(parsed, null, 2)
-                }).catch((err: any) => console.error("History tracking failed:", err));
+                }).catch(() => {});
             }
         } catch (err: any) {
             setValidationError(err.message || "Invalid JSON syntax.");

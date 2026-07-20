@@ -16,8 +16,43 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DevToolkit AI",
-  description: "AI-powered developer utilities to generate READMEs, explain code, create commit messages, generate regex, and format JSON.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://dev-toolkit-ai.vercel.app"),
+  title: {
+    default: "DevToolkit.AI - AI-Powered Developer Workspace & Tools",
+    template: "%s | DevToolkit.AI"
+  },
+  description: "Supercharge your shipping workflow. Generate comprehensive READMEs, validate JSON, write semantic conventional git commit messages, and build regex expressions with high-performance AI tools.",
+  keywords: [
+    "developer tools", "AI coding assistant", "readme generator", 
+    "conventional commits helper", "regex sandbox", "json validator", 
+    "shipping utilities", "Next.js dev tools"
+  ],
+  authors: [{ name: "Himanshu Singh" }],
+  creator: "Himanshu Singh",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://dev-toolkit-ai.vercel.app",
+    title: "DevToolkit.AI - AI Developer Workspace",
+    description: "Automate the parts of shipping nobody enjoys. Standardize commit logs, generate specifications, test regex, and audit configuration schemas.",
+    siteName: "DevToolkit.AI",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DevToolkit.AI - AI Developer Workspace",
+    description: "Automate the parts of shipping nobody enjoys. Standardize commit logs, generate specifications, test regex, and audit configuration schemas.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 };
 
 export default function RootLayout({

@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { BookOpen, GitCommit, Code2, Binary, Database, ArrowRight } from 'lucide-react'
+import { BookOpen, GitCommit, Binary, Database, ArrowRight } from 'lucide-react'
 import HistorySection from './HistorySection'
 
 type WindowType = 'hub' | 'readme' | 'commit' | 'regex' | 'json'

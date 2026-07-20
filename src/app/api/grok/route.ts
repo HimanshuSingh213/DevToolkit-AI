@@ -53,9 +53,12 @@ export async function POST(req: Request) {
             }
         });
     } catch (err: any) {
+        console.error("[Groq API Error]:", err);
+        const msg = err.message || "";
+        const isPublic = msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("limit") || msg.toLowerCase().includes("too large") || msg.toLowerCase().includes("tpm");
         return NextResponse.json<ApiResponse>({
             success: false,
-            error: err.message || "Failed to process request"
+            error: isPublic ? msg : "Failed to process AI request. Please try again."
         }, { status: 500 });
     }
 }

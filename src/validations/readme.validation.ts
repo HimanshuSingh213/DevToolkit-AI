@@ -3,16 +3,16 @@ import { z } from 'zod';
 export const readmeRequestSchema = z.discriminatedUnion('mode', [
   z.object({
     mode: z.literal('github'),
-    githubUrl: z.string().url('Invalid URL format').refine(
+    githubUrl: z.string().url('Invalid URL format').max(2000, 'URL too long').refine(
       (val) => val.includes('github.com'),
       'URL must be a valid GitHub repository link'
     ),
-    customInstructions: z.string().optional()
+    customInstructions: z.string().max(10000, 'Custom instructions exceed max length').optional()
   }),
   z.object({
     mode: z.literal('manual'),
-    manualData: z.string().min(10, 'Manual scope details must be at least 10 characters long'),
-    customInstructions: z.string().optional()
+    manualData: z.string().min(10, 'Manual scope details must be at least 10 characters long').max(50000, 'Manual data exceeds max length'),
+    customInstructions: z.string().max(10000, 'Custom instructions exceed max length').optional()
   })
 ]);
 

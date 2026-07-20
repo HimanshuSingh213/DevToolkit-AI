@@ -179,7 +179,8 @@ const generateRepoSummary = async (
             return res.text || "";
         }
         catch(err: any){
-
+            lastError = err;
+            console.warn(`[Gemini Pipeline] Layer 1 - Key attempt ${attempt + 1} failed: ${err.message || err}`);
         }
     }
     throw new Error(`All API keys exhausted. Last Error: ${lastError?.message}`);

@@ -223,7 +223,7 @@ ${techStack.join(", ")}
                     tool: "readme",
                     title: docTitle.slice(0, 150),
                     output: generatedReadme
-                }).catch(err => console.error("History tracking failed:", err));
+                }).catch(() => {});
             } else {
                 const apiError = response.data.error || "";
                 if (apiError.toLowerCase().includes("private") || apiError.toLowerCase().includes("not found")) {
@@ -236,7 +236,6 @@ ${techStack.join(", ")}
             }
         } catch (error: any) {
             if (axios.isCancel(error)) {
-                console.log("Generation request aborted.");
                 return;
             }
             if (error.response?.status === 429) {

@@ -103,10 +103,10 @@ export default function RegexGenerator() {
       ]
     }
 
-    Rules:
-    - Focus heavily on the requested regex specifications.
-    - Provide exactly 8 high-fidelity test cases, with a mix of valid (shouldMatch: true) and invalid (shouldMatch: false) inputs.
-    - Output ONLY the raw JSON. Do not wrap in markdown code blocks, and do not write introduction or outro remarks.`;
+    CRITICAL FORMATTING MANDATE:
+    - Output ONLY pure, raw JSON starting with '{' and ending with '}'.
+    - ABSOLUTELY NO MARKDOWN CODE BLOCKS OR BACKTICKS (DO NOT USE \`\`\` OR \`\`\`json).
+    - DO NOT INCLUDE ANY PREAMBLE, EXPLANATION, OR OUTRO REMARKS.`;
 
         const userPrompt = `Generate a regular expression for the following request:\n"${matchInput.trim()}"`;
 
@@ -117,20 +117,27 @@ export default function RegexGenerator() {
             }, { signal: controller.signal });
 
             if (res.data.success) {
-                const parsed = JSON.parse(res.data.data.result.text);
+                let parsed: any;
+                try {
+                    parsed = JSON.parse(res.data.data.result.text.trim());
+                } catch (jsonErr) {
+                    toast.error("Failed to parse generated regex format. Please try again.");
+                    return;
+                }
+
                 setRegexData(parsed);
                 setActualModel(res.data.data.result.modelUsed);
-                toast.success("Regex created successfully.")
+                toast.success("Regex created successfully.");
                 if (res.data.data.usage) {
                     updateUsage(res.data.data.usage);
                 }
                 
-                const patternTitle = (parsed.title || `Regex: ${parsed.regex}`).slice(0, 150);
+                const patternTitle = (parsed?.title || `Regex: ${parsed?.regex || "Pattern"}`).slice(0, 150);
                 axios.post("/api/history", {
                     tool: "regex",
                     title: patternTitle,
                     output: res.data.data.result.text
-                }).catch(err => console.error("History tracking failed:", err));
+                }).catch(() => {});
             }
             else {
                 const apiError = res.data.error || "";

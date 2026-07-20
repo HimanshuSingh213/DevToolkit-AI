@@ -56,9 +56,12 @@ export async function POST(req: Request) {
       }
     })
   } catch (err: any) {
+    console.error("[Gemini API Error]:", err);
+    const msg = err.message || "";
+    const isPublic = msg.toLowerCase().includes("private") || msg.toLowerCase().includes("not found") || msg.toLowerCase().includes("limit");
     return NextResponse.json<ApiResponse>({
       success: false,
-      error: err.message || "Failed to generate README"
+      error: isPublic ? msg : "Failed to generate README. Please try again."
     }, { status: 500 })
   }
 }

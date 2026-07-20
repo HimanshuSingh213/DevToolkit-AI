@@ -101,9 +101,10 @@ CRITICAL SEMANTIC COMMIT RULES (for the "commitMessage" value):
   - If tone is 'emoji': Same as conventional, but prepend a relevant Gitmoji icon to the header.
   - If tone is 'minimalist': Output a strictly single-line, direct description (no conventional prefix, no scope, no emojis, e.g. 'implement commit generator, refactor fallback logic').
 
-Rules:
-- Output ONLY the raw JSON object.
-- DO NOT wrap the output in markdown code blocks (\`\`\`), and do not write introduction or outro remarks.`;
+CRITICAL FORMATTING MANDATE:
+- Output ONLY pure, raw JSON starting with '{' and ending with '}'.
+- ABSOLUTELY NO MARKDOWN CODE BLOCKS OR BACKTICKS (DO NOT USE \`\`\` OR \`\`\`json).
+- DO NOT INCLUDE ANY PREAMBLE, EXPLANATION, OR OUTRO REMARKS.`;
 
         const userPrompt = `Selected Tone Style: ${tone}\n\nUser Input (Git Diff or Summary):\n${cleanedDiff.trim()}`;
         const targetModel = cleanedDiff.trim().length < 20000 ? "llama-3.1-8b-instant" : "groq/compound-mini";
@@ -125,7 +126,7 @@ Rules:
 
                 try {
                     const parsed = JSON.parse(rawText.trim());
-                    commitMessage = parsed.commitMessage || rawText;
+                    commitMessage = parsed.commitMessage || rawText.trim();
                     historyTitle = parsed.title || commitMessage.split("\n")[0].trim();
                 } catch {
                     commitMessage = rawText.trim();
@@ -144,7 +145,7 @@ Rules:
                     tool: "commit",
                     title: historyTitle.slice(0, 150),
                     output: commitMessage
-                }).catch(err => console.error("History tracking failed:", err));
+                }).catch(() => {});
             } else {
                 const apiError = response.data.error || "";
                 if (apiError.toLowerCase().includes("too large") || apiError.toLowerCase().includes("413") || apiError.toLowerCase().includes("tpm") || apiError.toLowerCase().includes("tokens")) {
@@ -157,7 +158,6 @@ Rules:
             }
         } catch (error: any) {
             if (axios.isCancel(error)) {
-                console.log("Request aborted.");
                 return;
             }
             if (error.response?.status === 429) {
