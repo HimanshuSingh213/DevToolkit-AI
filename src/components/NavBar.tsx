@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { ArrowLeft, LogOut } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import Image from 'next/image'
@@ -47,9 +47,19 @@ export default function NavBar() {
   };
 
   const isLoading = status === 'loading' || !session?.user;
+  const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    const checkIsDesktop = () => setIsDesktop(window.innerWidth >= 768)
+    checkIsDesktop()
+    window.addEventListener('resize', checkIsDesktop)
+    return () => window.removeEventListener('resize', checkIsDesktop)
+  }, [])
+
+  if (isDesktop === false) return null
 
   return (
-    <div className='h-14 w-full bg-surface border-b border-border-soft flex flex-row items-center px-6 justify-between select-none'>
+    <div className='hidden md:flex h-14 w-full bg-surface border-b border-border-soft flex-row items-center px-6 justify-between select-none'>
       {activeWindow === 'hub' ? (
         <div className="flex flex-row items-center gap-2">
           <span className="font-semibold text-text tracking-tight">

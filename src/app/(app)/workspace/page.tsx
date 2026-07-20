@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import WorkspaceHub from '@/components/workspace/WorkspaceHub'
 import useApp from '@/context/AppContext'
@@ -7,11 +8,27 @@ import ReadmeGenerator from '@/components/readme-generator/ReadmeGenerator'
 import CommitGenerator from '@/components/commit-msg-generator/CommitGenerator'
 import RegexGenerator from '@/components/regex-generator/RegexGenerator'
 import JsonToolkit from '@/components/json-toolkit/JsonToolkit'
+import DesktopOnlyNotice from '@/components/DesktopOnlyNotice'
 
-export default function page() {
-  const { activeWindow, setActiveWindow } = useApp()
+export default function WorkspacePage() {
+  const { activeWindow } = useApp()
+  const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
 
-  const handleBack = () => setActiveWindow('hub')
+  useEffect(() => {
+    const checkIsDesktop = () => setIsDesktop(window.innerWidth >= 768)
+    checkIsDesktop()
+
+    window.addEventListener('resize', checkIsDesktop)
+    return () => window.removeEventListener('resize', checkIsDesktop)
+  }, [])
+
+  if (isDesktop === null) {
+    return <div className="w-full h-full bg-background" />
+  }
+
+  if (!isDesktop) {
+    return <DesktopOnlyNotice />
+  }
 
   return (
     <div className={`flex flex-col grow w-full h-full p-4 min-h-0 ${activeWindow === 'hub' ? 'overflow-y-auto' : 'overflow-hidden'}`}>

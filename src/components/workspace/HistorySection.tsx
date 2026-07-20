@@ -178,7 +178,7 @@ export default function HistorySection() {
                     >
                         <div className="flex items-center gap-3 overflow-hidden flex-1">
                             <span className="w-2 h-2 rounded-full bg-success shrink-0" />
-                            <span className="text-xs font-mono text-text truncate max-w-[200px] sm:max-w-lg">
+                            <span className="text-xs font-mono text-text truncate max-w-50 sm:max-w-lg">
                                 {item.title}
                             </span>
                             <span className="text-[10px] font-mono text-text-muted select-none whitespace-nowrap hidden sm:inline pl-2">

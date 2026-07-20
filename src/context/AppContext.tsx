@@ -41,8 +41,10 @@ export function ContextProvider({ children }: { children: ReactNode }) {
     }, []);
 
     useEffect(() => {
-        fetchUsage();
-    }, []);
+        if (typeof window !== "undefined" && window.innerWidth >= 768) {
+            fetchUsage();
+        }
+    }, [fetchUsage]);
 
     const value = {
         activeWindow,
