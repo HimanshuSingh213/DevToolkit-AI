@@ -103,10 +103,10 @@ export default function RegexGenerator() {
       ]
     }
 
-    CRITICAL FORMATTING MANDATE:
-    - Output ONLY pure, raw JSON starting with '{' and ending with '}'.
-    - ABSOLUTELY NO MARKDOWN CODE BLOCKS OR BACKTICKS (DO NOT USE \`\`\` OR \`\`\`json).
-    - DO NOT INCLUDE ANY PREAMBLE, EXPLANATION, OR OUTRO REMARKS.`;
+    Rules:
+    - Focus heavily on the requested regex specifications.
+    - Provide exactly 8 high-fidelity test cases, with a mix of valid (shouldMatch: true) and invalid (shouldMatch: false) inputs.
+    - Output the result strictly in valid JSON format matching the schema above.`;
 
         const userPrompt = `Generate a regular expression for the following request:\n"${matchInput.trim()}"`;
 
@@ -117,10 +117,26 @@ export default function RegexGenerator() {
             }, { signal: controller.signal });
 
             if (res.data.success) {
-                let parsed: any;
+                let parsed: any = null;
+                const rawText = res.data.data.result.text.trim();
+
                 try {
-                    parsed = JSON.parse(res.data.data.result.text.trim());
-                } catch (jsonErr) {
+                    parsed = JSON.parse(rawText);
+                } catch {
+                    const cleaned = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+                    try {
+                        parsed = JSON.parse(cleaned);
+                    } catch {
+                        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+                        if (jsonMatch) {
+                            try {
+                                parsed = JSON.parse(jsonMatch[0]);
+                            } catch {}
+                        }
+                    }
+                }
+
+                if (!parsed) {
                     toast.error("Failed to parse generated regex format. Please try again.");
                     return;
                 }

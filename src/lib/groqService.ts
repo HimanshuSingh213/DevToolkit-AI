@@ -42,7 +42,8 @@ export const GenerateGrokOutput = async (
                     { role: "user", content: userPrompt }
                 ],
                 model: currentModel,
-                temperature: 0.4
+                temperature: 0.4,
+                response_format: { type: "json_object" }
             });
 
             return {
