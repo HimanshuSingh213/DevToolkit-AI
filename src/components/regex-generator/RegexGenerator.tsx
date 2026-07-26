@@ -237,7 +237,7 @@ export default function RegexGenerator() {
                             maxLength={1000}
                             onChange={(e) => setMatchInput(e.target.value)}
                             placeholder={`e.g. Validate standard strong password containing minimum 8 letters, 1 number, and 1 uppercase character.${"\n"}(max 1000 characters allowed)`}
-                            className="w-full min-h-[180px] p-4 bg-surface border border-border-soft rounded-lg text-xs font-mono text-text outline-none focus:border-accent transition duration-200 resize-none leading-relaxed"
+                            className="w-full min-h-45 p-4 bg-surface border border-border-soft rounded-lg text-xs font-mono text-text outline-none focus:border-accent transition duration-200 resize-none leading-relaxed"
                         />
                     </div>
 

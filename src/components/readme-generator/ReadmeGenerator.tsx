@@ -37,6 +37,27 @@ export default function ReadmeGenerator() {
     const abortControllerRef = useRef<AbortController | null>(null);
     const [elapsedTime, setElapsedTime] = useState(0);
 
+    const activeEnginesText = useMemo(() => {
+        const formatModelName = (modelName?: string): string => {
+            if (!modelName) return "";
+            return modelName
+                .split("-")
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(" ");
+        };
+
+        const rawL1 = process.env.NEXT_PUBLIC_GEMINI_MODEL_LAYER1 || "gemini-3.1-flash-lite";
+        const rawL2 = process.env.NEXT_PUBLIC_GEMINI_MODEL_LAYER2 || "gemma-4-26b-a4b-it";
+
+        const formattedL1 = formatModelName(rawL1);
+        const formattedL2 = formatModelName(rawL2);
+
+        if (formattedL1 === formattedL2) {
+            return `Active Engine: ${formattedL1}`;
+        }
+        return `Active Engines: ${formattedL1} & ${formattedL2}`;
+    }, [process.env.NEXT_PUBLIC_GEMINI_MODEL_LAYER1, process.env.NEXT_PUBLIC_GEMINI_MODEL_LAYER2]);
+
     useEffect(() => {
         let interval: NodeJS.Timeout;
 
@@ -503,7 +524,7 @@ ${techStack.join(", ")}
                     <div className="flex items-center justify-between px-1 text-[10px] font-mono text-text-muted select-none">
                         <span className="flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                            <span>Active Engines: Gemini 3.1 & Gemma 4</span>
+                            <span>{activeEnginesText}</span>
                         </span>
                         <span>
                             Usage: {dailyUsage}/{dailyLimit} req today

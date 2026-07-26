@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Trash2, Copy, Check, Loader2, RefreshCw } from 'lucide-react';
+import { Trash2, Copy, Check, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { toast } from 'sonner';
 
@@ -49,6 +50,12 @@ export default function HistorySection() {
         const nextPage = page + 1;
         setPage(nextPage);
         fetchHistory(nextPage);
+    };
+
+    const handleShowLess = () => {
+        setHistory(prev => prev.slice(0, 10));
+        setPage(1);
+        setHasMore(true);
     };
 
     const handleClearAll = async () => {
@@ -119,7 +126,11 @@ export default function HistorySection() {
 
     if (loading && page === 1) {
         return (
-            <div className="flex flex-col gap-4 mt-12 pb-16">
+            <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col gap-4 mt-12 pb-16"
+            >
                 <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
@@ -129,13 +140,17 @@ export default function HistorySection() {
                 <div className="bg-surface/50 border border-border-soft rounded-xl overflow-hidden shadow-lg shadow-black/30">
                     {renderSkeletons(3)}
                 </div>
-            </div>
+            </motion.div>
         );
     }
 
     if (history.length === 0) {
         return (
-            <div className="flex flex-col gap-4 mt-12 pb-16">
+            <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col gap-4 mt-12 pb-16"
+            >
                 <div className="flex items-center justify-between select-none px-1">
                     <div className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-accent" />
@@ -148,12 +163,16 @@ export default function HistorySection() {
                         Your generated READMEs, commit messages, and regex inputs will appear here automatically.
                     </span>
                 </div>
-            </div>
+            </motion.div>
         );
     }
 
     return (
-        <div className="flex flex-col gap-4 mt-12 pb-16">
+        <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col gap-4 mt-12 pb-16"
+        >
             {/* Header row */}
             <div className="flex items-center justify-between select-none px-1">
                 <div className="flex items-center gap-2">
@@ -171,53 +190,83 @@ export default function HistorySection() {
 
             {/* History Cards container */}
             <div className="bg-surface/50 border border-border-soft rounded-xl divide-y divide-border-soft overflow-hidden shadow-lg shadow-black/30">
-                {history.map((item) => (
-                    <div 
-                        key={item._id}
-                        className="flex flex-row items-center justify-between p-4 bg-card hover:bg-elevated/40 transition duration-200"
-                    >
-                        <div className="flex items-center gap-3 overflow-hidden flex-1">
-                            <span className="w-2 h-2 rounded-full bg-success shrink-0" />
-                            <span className="text-xs font-mono text-text truncate max-w-50 sm:max-w-lg">
-                                {item.title}
-                            </span>
-                            <span className="text-[10px] font-mono text-text-muted select-none whitespace-nowrap hidden sm:inline pl-2">
-                                {formatHistoryDate(item.createdAt)}
-                            </span>
-                        </div>
+                <AnimatePresence initial={false}>
+                    {history.map((item) => (
+                        <motion.div 
+                            key={item._id}
+                            layout
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                            transition={{ duration: 0.25, ease: "easeOut" }}
+                            className="flex flex-row items-center justify-between p-4 bg-card hover:bg-elevated/40 transition duration-200"
+                        >
+                            <div className="flex items-center gap-3 overflow-hidden flex-1">
+                                <span className="w-2 h-2 rounded-full bg-success shrink-0" />
+                                <span className="text-xs font-mono text-text truncate max-w-50 sm:max-w-lg">
+                                    {item.title}
+                                </span>
+                                <span className="text-[10px] font-mono text-text-muted select-none whitespace-nowrap hidden sm:inline pl-2">
+                                    {formatHistoryDate(item.createdAt)}
+                                </span>
+                            </div>
 
-                        <div className="flex items-center gap-3 shrink-0 ml-4">
-                            <span className="px-2.5 py-0.5 rounded border border-border-soft bg-elevated/30 text-[10px] font-mono text-text-muted select-none">
-                                {getToolBadge(item.tool)}
-                            </span>
-                            <button
-                                onClick={() => handleCopy(item._id, item.output)}
-                                className="text-text-muted hover:text-text cursor-pointer transition p-1 hover:bg-surface rounded border-none bg-transparent outline-none"
-                            >
-                                {copiedId === item._id ? (
-                                    <Check size={14} className="text-success" />
-                                ) : (
-                                    <Copy size={14} />
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                ))}
+                            <div className="flex items-center gap-3 shrink-0 ml-4">
+                                <span className="px-2.5 py-0.5 rounded border border-border-soft bg-elevated/30 text-[10px] font-mono text-text-muted select-none">
+                                    {getToolBadge(item.tool)}
+                                </span>
+                                <button
+                                    onClick={() => handleCopy(item._id, item.output)}
+                                    className="text-text-muted hover:text-text cursor-pointer transition p-1 hover:bg-surface rounded border-none bg-transparent outline-none"
+                                >
+                                    {copiedId === item._id ? (
+                                        <Check size={14} className="text-success" />
+                                    ) : (
+                                        <Copy size={14} />
+                                    )}
+                                </button>
+                            </div>
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
                 
                 {/* Render more skeletons when paginating */}
                 {loadingMore && renderSkeletons(2)}
             </div>
 
             {/* Pagination Controls */}
-            {hasMore && !loadingMore && (
-                <button
-                    onClick={handleLoadMore}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-border-soft bg-card text-xs font-mono text-text-muted hover:text-text hover:bg-elevated transition duration-200 cursor-pointer shadow-md select-none mt-2 outline-none"
-                >
-                    <RefreshCw size={12} className="animate-spin-slow" />
-                    Show more
-                </button>
-            )}
-        </div>
+            <AnimatePresence mode="wait">
+                {!loadingMore && (hasMore || page > 1) && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 8 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex items-center gap-3 mt-2"
+                    >
+                        {hasMore && (
+                            <button
+                                type="button"
+                                onClick={handleLoadMore}
+                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border border-border-soft bg-card text-xs font-mono text-text-muted hover:text-text hover:bg-elevated transition duration-200 cursor-pointer shadow-md select-none outline-none"
+                            >
+                                <ChevronDown size={14} />
+                                <span>Show More</span>
+                            </button>
+                        )}
+                        {page > 1 && (
+                            <button
+                                type="button"
+                                onClick={handleShowLess}
+                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border border-border-soft bg-card text-xs font-mono text-text-muted hover:text-text hover:bg-elevated transition duration-200 cursor-pointer shadow-md select-none outline-none"
+                            >
+                                <ChevronUp size={14} />
+                                <span>Show Less</span>
+                            </button>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     );
 }
