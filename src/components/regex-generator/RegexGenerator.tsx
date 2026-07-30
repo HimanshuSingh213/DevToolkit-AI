@@ -86,33 +86,11 @@ export default function RegexGenerator() {
         setLoading(true);
         setRegexData(null);
 
-        const systemConfig = `You are an expert Regular Expression (Regex) assistant. Your job is to output a strictly formatted JSON object containing a generated regex pattern, a        
-  step-by-step breakdown explanation of the tokens, and exactly 4 comprehensive test cases representing acceptable and unacceptable inputs.
-
-    The output MUST be a valid JSON object matching this exact schema:
-    {
-      "title": "A short, descriptive 3-6 word title in English of what this regex does (e.g., 'Email Address Validator')",
-      "regex": "the regex string pattern (properly escaped for JSON, e.g. use double backslashes \\\\d)",
-      "explanation": [
-        { "token": "^", "meaning": "Asserts start of line" },
-        { "token": "\\\\d{4}", "meaning": "Matches exactly 4 digits" }
-      ],
-      "testCases": [
-        { "value": "test_value_1", "shouldMatch": true, "description": "matches standard format" },
-        { "value": "test_value_2", "shouldMatch": false, "description": "fails due to missing digit prefix" }
-      ]
-    }
-
-    Rules:
-    - Focus heavily on the requested regex specifications.
-    - Provide exactly 8 high-fidelity test cases, with a mix of valid (shouldMatch: true) and invalid (shouldMatch: false) inputs.
-    - Output the result strictly in valid JSON format matching the schema above.`;
-
         const userPrompt = `Generate a regular expression for the following request:\n"${matchInput.trim()}"`;
 
         try {
             const res = await axios.post("/api/grok", {
-                systemConfig,
+                tool: "regex",
                 userPrompt
             }, { signal: controller.signal });
 

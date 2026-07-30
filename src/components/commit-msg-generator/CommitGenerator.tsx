@@ -79,34 +79,13 @@ export default function CommitGenerator() {
         setLoading(true);
         setGeneratedMessage("");
 
-        const systemConfig = `You are an expert git semantic commit message engine. Your task is to output a strictly formatted JSON object containing a short title and a conventional commit message based on the user's input.
-
-    The output MUST be a valid JSON object matching this exact schema:
-    {
-      "title": "A short, descriptive 3-5 word summary in English of the changes (e.g. 'Implement OAuth Logins')",
-      "commitMessage": "the conventional commit message generated based on the selected tone style"
-    }
-
-CRITICAL SEMANTIC COMMIT RULES (for the "commitMessage" value):
-- GITHUB STANDARD CONVENTIONAL COMMITS: Use standard conventional commit types (e.g. 'feat' for new features, 'fix' for bug fixes, 'refactor' for code refactoring, 'docs' for documentation, 'chore' for build/dependencies, 'style' for formatting, 'perf' for performance).
-- DEEP FILE-BY-FILE ANALYSIS: Carefully read every modified file and line in the provided git diff. Identify the exact technical actions taken in each file (e.g., 'enforce strict JSON output format', 'implement multi-stage parsing for AI responses', 'update fallback sequence'). Do NOT write vague or generic summaries.
-- SINGLE SENTENCE FORMAT: The "commitMessage" must contain EXACTLY one single line of text (one sentence). Do NOT output multiple lines, bullet points, bodies, or footers.
-- MULTIPLE CHANGES: Combine all distinct logical changes from the diff into a clear, comma-separated single sentence. Structure: <type>(<scope>): <precise change 1>, <precise change 2>, <precise change 3>.
-- IMPERATIVE MOOD: Use present-tense, imperative mood for all actions (e.g., 'implement', 'refactor', 'fix', 'add' instead of 'implemented', 'refactored', 'fixed', 'added').
-- TONE STYLES:
-  - If tone is 'conventional': Output a strictly single-line conventional commit message starting with <type>(<scope>): followed by your comma-separated sentence. Do NOT use emojis.
-  - If tone is 'emoji': Same as conventional, but prepend a relevant Gitmoji icon to the header.
-  - If tone is 'minimalist': Output a strictly single-line, direct description without conventional prefix or scope (e.g., 'refactor commit and regex generators to enforce strict JSON output format, improve error handling for parsing responses').
-
-- Output the result strictly in valid JSON format matching the schema above.`;
-
         const userPrompt = `Selected Tone Style: ${tone}\n\nUser Input (Git Diff or Summary):\n${cleanedDiff.trim()}`;
         const targetModel = "llama-3.3-70b-versatile";
         setActualModel(targetModel);
 
         try {
             const response = await axios.post("/api/grok", {
-                systemConfig,
+                tool: "commit",
                 userPrompt,
                 model: targetModel
             }, {

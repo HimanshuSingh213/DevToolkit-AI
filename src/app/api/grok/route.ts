@@ -42,7 +42,8 @@ export async function POST(req: Request) {
         const responseData = await GenerateGrokOutput(
             requestData.systemConfig,
             requestData.userPrompt,
-            requestData.model
+            requestData.model,
+            requestData.tool
         );
 
         return NextResponse.json<ApiResponse>({

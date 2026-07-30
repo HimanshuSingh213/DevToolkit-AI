@@ -1,5 +1,6 @@
 import Groq from "groq-sdk";
 import { generateGeminiFallback } from "./geminiService";
+import { ALLOWED_GROQ_MODELS, SERVER_SYSTEM_PROMPTS } from "@/validations/groq.validation";
 
 const groq = new Groq({
     apiKey: process.env.GROK_API_KEY,
@@ -9,7 +10,7 @@ const groq = new Groq({
 const getFallbackSequence = (): string[] => {
     const chainStr = process.env.GROK_MODEL_FALLBACK_CHAIN;
     if (chainStr) {
-        return chainStr.split(",").map(m => m.trim()).filter(Boolean);
+        return chainStr.split(",").map(m => m.trim()).filter(m => (ALLOWED_GROQ_MODELS as readonly string[]).includes(m));
     }
     return [
         "llama-3.1-8b-instant",
@@ -21,15 +22,27 @@ const getFallbackSequence = (): string[] => {
 };
 
 export const GenerateGrokOutput = async (
-    systemConfig: string,
+    systemConfig: string | undefined,
     userPrompt: string,
-    model?: string
+    requestedModel?: string,
+    tool?: "commit" | "regex"
 ) => {
+
+    let targetModel = requestedModel;
+    if (targetModel && !(ALLOWED_GROQ_MODELS as readonly string[]).includes(targetModel)) {
+        console.warn(`[Groq Service] Unauthorized model requested: '${targetModel}'. Falling back to server default.`);
+        targetModel = undefined;
+    }
+
+    const effectiveSystemConfig = (tool && SERVER_SYSTEM_PROMPTS[tool]) 
+        ? SERVER_SYSTEM_PROMPTS[tool] 
+        : (systemConfig || "");
+
     const fallbackSequence = getFallbackSequence();
     const priorityModel0 = fallbackSequence[0] || "llama-3.1-8b-instant";
     const priorityModel1 = fallbackSequence[1] || "groq/compound-mini";
 
-    const initialModel = model || (userPrompt.length < 20000 ? priorityModel0 : priorityModel1);
+    const initialModel = targetModel || (userPrompt.length < 20000 ? priorityModel0 : priorityModel1);
     const queue = [initialModel, ...fallbackSequence.filter(m => m !== initialModel)];
     let lastError: any = null;
 
@@ -38,7 +51,7 @@ export const GenerateGrokOutput = async (
             console.log(`[Groq Service] Attempting request with model: ${currentModel}`);
             const aiOutput = await groq.chat.completions.create({
                 messages: [
-                    { role: "system", content: systemConfig },
+                    { role: "system", content: effectiveSystemConfig },
                     { role: "user", content: userPrompt }
                 ],
                 model: currentModel,
@@ -74,7 +87,7 @@ export const GenerateGrokOutput = async (
 
     try {
         console.log(`[Groq Service] All Groq fallback models failed. Routing to Gemini fallback queue...`);
-        const geminiResult = await generateGeminiFallback(systemConfig, userPrompt);
+        const geminiResult = await generateGeminiFallback(effectiveSystemConfig, userPrompt);
         console.log(`[Groq Service] Gemini fallback succeeded with model: ${geminiResult.modelUsed}`);
         return geminiResult;
     } catch (fallbackErr: any) {
