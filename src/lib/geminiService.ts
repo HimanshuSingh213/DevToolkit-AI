@@ -353,8 +353,8 @@ export const generateGeminiFallback = async (
     userPrompt: string
 ): Promise<{ text: string; modelUsed: string }> => {
     const models = [
-        process.env.NEXT_PUBLIC_GEMINI_FALLBACK_MODEL_1 || "gemini-2.5-flash-lite",
-        process.env.NEXT_PUBLIC_GEMINI_FALLBACK_MODEL_2 || "gemini-3-flash",
+        process.env.NEXT_PUBLIC_GEMINI_FALLBACK_MODEL_1 || "gemini-3.5-flash-lite",
+        process.env.NEXT_PUBLIC_GEMINI_FALLBACK_MODEL_2 || "gemini-3.1-flash-lite",
         process.env.NEXT_PUBLIC_GEMINI_FALLBACK_MODEL_3 || "gemini-3.5-flash"
     ];
 

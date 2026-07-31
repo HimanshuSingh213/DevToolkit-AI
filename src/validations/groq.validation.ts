@@ -2,13 +2,11 @@ import z from "zod";
 
 export const ALLOWED_GROQ_MODELS = [
     "llama-3.1-8b-instant",
+    "openai/gpt-oss-20b",
+    "qwen/qwen3.6-27b",
     "llama-3.3-70b-versatile",
-    "meta-llama/llama-4-scout-17b-16e-instruct",
     "groq/compound-mini",
-    "groq/compound",
-    "gemini-2.5-flash-lite",
-    "gemini-3-flash",
-    "gemini-3.5-flash"
+    "groq/compound"
 ] as const;
 
 export const SERVER_SYSTEM_PROMPTS = {
